@@ -238,15 +238,15 @@ const Visuals = (() => {
       const grid = h('div.ring-grid');
       rows.forEach(({ topic, pct: tp, done, total }) => {
         const soonTopic = topic.status === 'soon';
-        const rg = ring({ size: 76, stroke: 6, pct: soonTopic ? 0 : tp, dim: soonTopic });
-        grid.append(h('button.tile' + (soonTopic ? '.tile-soon' : ''),
+        const state = soonTopic ? 'soon' : tp >= 100 ? 'done' : tp > 0 ? 'started' : 'new';
+        grid.append(h('button.tile.tile-' + state,
           { style: { '--i': i++ }, onclick: () => handlers.onOpen(topic.id), title: I18n.topic(topic).title },
-          rg.el,
-          h('div.tile-text',
+          h('div.tile-top',
             h('span.tile-icon', topic.icon),
-            h('strong', I18n.topic(topic).title),
-            h('small', soonTopic ? I18n.t('dash.soon') : I18n.t('dash.steps', { done, total })),
-          ),
+            h('span.tile-pct', state === 'done' ? '✓' : soonTopic ? '' : tp + '%')),
+          h('strong', I18n.topic(topic).title),
+          h('div.tile-bar', h('i', { style: { width: (soonTopic ? 0 : tp) + '%' } })),
+          h('small', soonTopic ? I18n.t('dash.soon') : I18n.t('dash.steps', { done, total })),
         ));
       });
       root.append(h('section.dash-group',

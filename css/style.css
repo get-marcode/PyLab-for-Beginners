@@ -229,19 +229,27 @@ input[type='range'] { accent-color: var(--accent); width: 100%; }
 .ring-sub { position: absolute; bottom: 52px; font: 500 12px var(--mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
 .ring-dim { opacity: 0.35; }
 
-.ring-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.ring-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
 .tile {
-  display: flex; align-items: center; gap: 18px; padding: 18px; text-align: left; border-radius: 20px;
+  display: flex; flex-direction: column; gap: 8px; padding: 14px 16px 15px; text-align: left; border-radius: 16px;
   background: var(--panel); box-shadow: var(--hair);
   transition: transform 0.25s, box-shadow 0.3s;
   animation: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i) * 35ms);
 }
-.tile:hover { transform: translateY(-3px); box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.35), 0 18px 44px -20px var(--accent-glow); }
-.tile-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.tile-text strong { font-size: 15.5px; line-height: 1.25; font-weight: 500; color: var(--ink); }
-.tile-text small { color: var(--ink-2); font-size: 12.5px; }
-.tile-icon { align-self: flex-start; min-width: 34px; height: 26px; padding: 0 8px; margin-bottom: 4px; display: inline-grid; place-items: center; border-radius: 8px; font: 700 13px var(--mono); letter-spacing: 0.02em; color: var(--accent-soft); background: rgba(var(--accent-rgb), 0.14); box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.38); }
-.tile-soon { opacity: 0.6; }
+.tile:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.35), 0 16px 40px -20px var(--accent-glow); }
+.tile-top { display: flex; align-items: center; justify-content: space-between; }
+.tile strong { font-size: 15px; line-height: 1.25; font-weight: 500; color: var(--ink); }
+.tile small { color: var(--ink-2); font-size: 12px; }
+.tile-icon { min-width: 34px; height: 26px; padding: 0 8px; display: inline-grid; place-items: center; border-radius: 8px; font: 700 13px var(--mono); letter-spacing: 0.02em; color: var(--accent-soft); background: rgba(var(--accent-rgb), 0.14); box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.38); }
+.tile-pct { font: 600 12px var(--mono); color: var(--muted); }
+.tile-bar { height: 3px; border-radius: 3px; background: rgba(var(--fg), 0.08); overflow: hidden; }
+.tile-bar i { display: block; height: 100%; background: var(--accent); }
+.tile-new .tile-icon { color: var(--muted); background: rgba(var(--fg), 0.05); box-shadow: inset 0 0 0 1px rgba(var(--fg), 0.12); }
+.tile-started .tile-pct { color: var(--accent-soft); }
+.tile-done .tile-pct { color: var(--ok); font-size: 15px; }
+.tile-done .tile-bar i { background: var(--ok); }
+.tile-done .tile-icon { color: var(--ok); background: rgba(52, 211, 153, 0.12); box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.4); }
+.tile-soon { opacity: 0.55; }
 
 .dash-hero { padding: clamp(18px, 3vw, 30px); gap: clamp(18px, 4vw, 40px); }
 .dash-hero h1 { font-size: clamp(24px, 3vw, 32px); }
