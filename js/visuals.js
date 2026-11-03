@@ -1604,6 +1604,324 @@ const Visuals = (() => {
     return { destroy() { if (timer) clearInterval(timer); } };
   };
 
+  /* ------------------------------------------------- Szene: Linked List */
+
+  scenes.linkedNodes = (root, cfg, ctx) => {
+    const SLOTS = [[4, 12], [32, 62], [62, 10], [74, 62]]; // Position der Knoten im "Speicher" (in %)
+    const NEW_SLOT = [34, 8];
+    const ADDRS = ['0x1A40', '0x2F88', '0x3C10', '0x4B24'];
+    const NEW_ADDR = '0x5D70';
+    let sel = 1;
+    let nodes = [];
+    let head = null;
+    let hot = new Set();
+    let newNode = null;
+
+    const area = h('div.mem-area');
+    const arrows = svg('svg', { class: 'arrows' });
+    const defs = svg('defs');
+    const marker = svg('marker', { id: 'ah', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' });
+    marker.append(svg('path', { d: 'M0,0 L10,5 L0,10 z', class: 'arrow-head' }));
+    defs.append(marker);
+    arrows.append(defs);
+    area.append(arrows);
+    const chain = h('code.repr');
+    const note = h('p.step-note', 'Wähle den Vorgänger und drücke ▶ Schritt.');
+    const lineEls = [
+      'neu = Node("Neuer Song")',
+      'neu.next = vorgaenger.next',
+      'vorgaenger.next = neu',
+    ].map((l, i) => h('div.code-line', h('span.ln', i + 1), h('span.src', { html: highlight(l) })));
+    const selRow = h('div.scene-tabs');
+
+    function makeNode(titel, addr, [x, y]) {
+      const nxt = h('span.nxt', 'None');
+      const el = h('div.node', { style: { left: x + '%', top: y + '%' } },
+        h('small.addr', addr), h('div.node-body', h('b', titel), nxt));
+      area.append(el);
+      return { titel, addr, el, nxt, next: null };
+    }
+    function drawArrows() {
+      arrows.querySelectorAll('path.link').forEach((p) => p.remove());
+      const A = area.getBoundingClientRect();
+      const all = newNode && !nodes.includes(newNode) ? [...nodes, newNode] : nodes;
+      all.forEach((n) => {
+        n.nxt.textContent = n.next ? n.next.addr : 'None';
+        n.el.classList.toggle('is-head', n === head);
+        if (!n.next) return;
+        const s = n.nxt.getBoundingClientRect();
+        const e = n.next.el.getBoundingClientRect();
+        const sx = s.right - A.left;
+        const sy = s.top + s.height / 2 - A.top;
+        const ex = e.left - A.left - 2;
+        const ey = e.top + e.height / 2 - A.top;
+        const dx = Math.max(50, Math.abs(ex - sx) / 2);
+        const p = svg('path', {
+          class: 'link' + (hot.has(n) ? ' hot' : ''),
+          d: `M${sx},${sy} C${sx + dx},${sy} ${ex - dx},${ey} ${ex},${ey}`,
+          'marker-end': 'url(#ah)',
+        });
+        arrows.append(p);
+      });
+    }
+    function chainText() {
+      const out = [];
+      for (let n = head; n; n = n.next) out.push(n.titel);
+      chain.textContent = out.join(' → ') + ' → None';
+    }
+    function build() {
+      area.querySelectorAll('.node').forEach((n) => n.remove());
+      newNode = null;
+      hot = new Set();
+      nodes = cfg.songs.map((t, i) => makeNode(t, ADDRS[i], SLOTS[i]));
+      nodes.forEach((n, i) => (n.next = nodes[i + 1] || null));
+      head = nodes[0];
+      chainText();
+      requestAnimationFrame(drawArrows);
+    }
+    function paintSel() {
+      selRow.replaceChildren(h('span.panel-title.inline', 'Einfügen nach:'), ...cfg.songs.map((t, i) =>
+        h('button.pill' + (i === sel ? '.is-active' : ''), { onclick: () => { sel = i; paintSel(); ctl.reset(); } }, t)));
+    }
+
+    const ctl = controlBar({
+      total: 3,
+      onStep(i) {
+        ctx.touch();
+        const pred = nodes[sel];
+        lineEls.forEach((l, j) => l.classList.toggle('is-active', j === i));
+        if (i === 0) {
+          newNode = makeNode(cfg.newSong, NEW_ADDR, NEW_SLOT);
+          newNode.el.classList.add('is-new');
+          newNode.el.animate([{ opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1 }], { duration: 400, easing: 'cubic-bezier(.2,1.3,.4,1)' });
+          note.innerHTML = `Ein neuer Knoten entsteht irgendwo im freien Speicher (<code>${NEW_ADDR}</code>). Noch zeigt er auf <code>None</code>, und <strong>die Kette ist unverändert</strong>.`;
+        } else if (i === 1) {
+          newNode.next = pred.next;
+          hot = new Set([newNode]);
+          note.innerHTML = pred.next
+            ? `Der neue Knoten übernimmt den Zeiger des Vorgängers: Er zeigt jetzt auf <strong>${pred.next.titel}</strong>. Erst <em>danach</em> darf der Vorgänger umgebogen werden — sonst ginge der Rest der Kette verloren.`
+            : 'Der Vorgänger ist der letzte Knoten, sein <code>next</code> ist <code>None</code>. Der neue Knoten übernimmt das und wird das neue Kettenende.';
+        } else {
+          pred.next = newNode;
+          hot = new Set([pred]);
+          const idx = nodes.indexOf(pred);
+          nodes.splice(idx + 1, 0, newNode);
+          chainText();
+          note.innerHTML = `Der Zeiger von <strong>${pred.titel}</strong> zeigt jetzt auf den neuen Knoten. <strong>2 Zeiger geändert, 0 Elemente verschoben</strong> — alle Knoten liegen noch an ihrer Adresse. Eine Python-Liste müsste bei <code>insert</code> alle folgenden Elemente nach rechts rücken.`;
+        }
+        drawArrows();
+      },
+      onReset() {
+        lineEls.forEach((l) => l.classList.remove('is-active'));
+        note.textContent = 'Wähle den Vorgänger und drücke ▶ Schritt.';
+        build();
+      },
+    });
+
+    const onResize = () => drawArrows();
+    window.addEventListener('resize', onResize);
+
+    root.append(
+      h('div.panel', selRow),
+      h('div.panel', h('div.panel-title', 'Speicher (Knoten mit Adresse und next-Zeiger)'), h('div.mem-scroll', area), h('div.panel-title.mt', 'Kette'), chain),
+      h('div.panel.panel-code', h('div.panel-title', 'Zeiger umbiegen'), h('div.code-block', lineEls)),
+      note, ctl.el,
+    );
+    paintSel();
+    build();
+    return { destroy() { window.removeEventListener('resize', onResize); ctl.destroy(); } };
+  };
+
+  /* ------------------------------------------------- Szene: Hash-Tabelle */
+
+  scenes.hashTable = (root, cfg, ctx) => {
+    const N = cfg.buckets;
+    const buckets = Array.from({ length: N }, () => []);
+    const layer = h('div.fly-layer');
+    let busy = false;
+
+    const hashOf = (key) => {
+      const codes = [...key].map((c) => c.charCodeAt(0));
+      const sum = codes.reduce((a, b) => a + b, 0);
+      return { codes, sum, idx: sum % N };
+    };
+    const input = h('input.field', { type: 'text', placeholder: 'Schlüssel, z. B. Maus', 'aria-label': 'Schlüssel', maxlength: 14 });
+    const calc = h('div.calc', h('span.dim', 'Wähle oder tippe einen Schlüssel.'));
+    const note = h('p.step-note', 'Eine Hash-Funktion macht aus dem Schlüssel eine Zahl — die bestimmt den Bucket. So findet <code>d["Maus"]</code> den Eintrag ohne Suchen.');
+    const rows = buckets.map((_, i) => {
+      const items = h('div.bk-items');
+      const row = h('div.bucket', h('span.bk-idx', i), items);
+      return { row, items };
+    });
+    const tableEl = h('div.buckets', rows.map((r) => r.row));
+    const repr = h('code.repr');
+
+    const paint = () => {
+      rows.forEach((r, i) => r.items.replaceChildren(...buckets[i].map((e) => h('span.entry', h('b', e.key), `: ${e.value}`))));
+      const all = buckets.flat();
+      repr.textContent = 'preise = {' + all.map((e) => `"${e.key}": ${e.value}`).join(', ') + '}';
+    };
+    const showCalc = (key, hs) => {
+      calc.replaceChildren(
+        h('div', h('code', `hash("${key}")`), ' = ', hs.codes.join(' + '), ' = ', h('strong', hs.sum)),
+        h('div', h('strong', hs.sum), ` % ${N} = `, h('strong.accent', hs.idx), h('span.dim', `   → Bucket ${hs.idx}`)));
+    };
+    const clearMarks = () => rows.forEach((r) => r.row.classList.remove('is-hit', 'is-collide', 'is-miss'));
+    const getKey = () => input.value.trim();
+
+    async function put(key) {
+      if (busy || !key) return;
+      busy = true;
+      ctx.touch();
+      clearMarks();
+      const hs = hashOf(key);
+      showCalc(key, hs);
+      const bucket = buckets[hs.idx];
+      const existing = bucket.find((e) => e.key === key);
+      const value = existing ? existing.value : (cfg.prices[key] ?? Math.round((hs.sum % 90 + 10) * 1.1 * 10) / 10);
+      const target = rows[hs.idx].row;
+      target.classList.add('is-hit');
+      await flyChip(layer, input, target, key, 'str');
+      if (existing) {
+        note.innerHTML = `Der Schlüssel <strong>${key}</strong> ist schon im Bucket ${hs.idx}: Der Wert wird <strong>überschrieben</strong>, kein neuer Eintrag.`;
+      } else {
+        const collision = bucket.length > 0;
+        bucket.push({ key, value });
+        if (collision) {
+          target.classList.add('is-collide');
+          note.innerHTML = `<strong>Kollision!</strong> Bucket ${hs.idx} gehört schon <strong>${bucket[0].key}</strong>. Beide Einträge werden im selben Bucket verkettet (Chaining). Python löst das intern ähnlich, nur geschickter.`;
+        } else {
+          note.innerHTML = `<code>preise["${key}"] = ${value}</code> → Der Eintrag landet direkt in Bucket ${hs.idx}.`;
+        }
+      }
+      paint();
+      busy = false;
+    }
+    function get(key) {
+      if (busy || !key) return;
+      ctx.touch();
+      clearMarks();
+      const hs = hashOf(key);
+      showCalc(key, hs);
+      const row = rows[hs.idx].row;
+      const hit = buckets[hs.idx].find((e) => e.key === key);
+      row.classList.add(hit ? 'is-hit' : 'is-miss');
+      note.innerHTML = hit
+        ? `<code>preise["${key}"]</code> → Hash berechnen, direkt zu Bucket ${hs.idx}, Wert <strong>${hit.value}</strong> gefunden. Kein Durchsuchen aller Einträge: <strong>O(1)</strong>.`
+        : `Bucket ${hs.idx} enthält <code>"${key}"</code> nicht → <span class="err-text">KeyError: '${key}'</span> (mit <code>.get()</code> bekämst du <code>None</code>).`;
+    }
+
+    const keyChips = h('div.chip-row', cfg.keys.map((k) => h('button.pill', { onclick: () => { input.value = k; showCalc(k, hashOf(k)); } }, k)));
+    root.append(
+      h('div.scene-grid',
+        h('div.panel',
+          h('div.panel-title', 'Schlüssel'), keyChips,
+          h('div.row-inline', input,
+            h('button.btn.btn-primary', { onclick: () => put(getKey()) }, 'put'),
+            h('button.btn.btn-ghost', { onclick: () => get(getKey()) }, 'get')),
+          h('div.panel-title', 'Hash-Funktion (vereinfacht)'), calc,
+          h('div.panel-title.mt', 'Dictionary'), repr,
+          h('button.btn.btn-ghost.mt', { onclick: () => { buckets.forEach((b) => (b.length = 0)); clearMarks(); paint(); } }, '↺ Leeren'),
+        ),
+        h('div.panel', h('div.panel-title', `Hash-Tabelle (${N} Buckets)`), tableEl),
+      ),
+      note,
+      layer,
+    );
+    paint();
+    return { destroy() {} };
+  };
+
+  /* ------------------------------------------------- Szene: Mengen-Kreise */
+
+  let vennSeq = 0;
+  scenes.vennSets = (root, cfg, ctx) => {
+    const uid = 'v' + ++vennSeq;
+    const A = new Set(cfg.a);
+    const B = new Set(cfg.b);
+    const CA = [190, 150];
+    const CB = [330, 150];
+    const R = 110;
+    const only = (S, T) => [...S].filter((x) => !T.has(x));
+    const zones = {
+      a: only(A, B),
+      both: [...A].filter((x) => B.has(x)),
+      b: only(B, A),
+    };
+    const ops = [
+      { id: 'and',  code: 'A & B', label: 'Schnittmenge', calc: () => zones.both,                              regions: [['B', 'clipA']] },
+      { id: 'or',   code: 'A | B', label: 'Vereinigung',  calc: () => [...zones.a, ...zones.both, ...zones.b], regions: [['A'], ['B']] },
+      { id: 'a-b',  code: 'A - B', label: 'Differenz A \\ B', calc: () => zones.a,                            regions: [['A', 'notB']] },
+      { id: 'b-a',  code: 'B - A', label: 'Differenz B \\ A', calc: () => zones.b,                            regions: [['B', 'notA']] },
+      { id: 'xor',  code: 'A ^ B', label: 'Symmetrische Differenz', calc: () => [...zones.a, ...zones.b],     regions: [['A', 'notB'], ['B', 'notA']] },
+    ];
+    let current = null;
+
+    const s = svg('svg', { viewBox: '0 0 520 300', class: 'venn', role: 'img', 'aria-label': 'Venn-Diagramm der Mengen A und B' });
+    const defs = svg('defs');
+    const clip = svg('clipPath', { id: uid + 'clipA' });
+    clip.append(svg('circle', { cx: CA[0], cy: CA[1], r: R }));
+    const mask = (id, c) => {
+      const m = svg('mask', { id: uid + id });
+      m.append(svg('rect', { width: 520, height: 300, fill: '#fff' }), svg('circle', { cx: c[0], cy: c[1], r: R, fill: '#000' }));
+      return m;
+    };
+    defs.append(clip, mask('notB', CB), mask('notA', CA));
+    const hl = svg('g', { class: 'venn-hl' });
+    const circle = (c, cls) => svg('circle', { cx: c[0], cy: c[1], r: R, class: cls });
+    const label = (x, txt) => { const t = svg('text', { x, y: 52, class: 'venn-label', 'text-anchor': 'middle' }); t.textContent = txt; return t; };
+    s.append(defs, hl, circle(CA, 'venn-c'), circle(CB, 'venn-c'), label(130, 'A'), label(390, 'B'));
+
+    const texts = new Map();
+    const place = (list, x) => list.forEach((ip, i) => {
+      const t = svg('text', { x, y: 150 + (i - (list.length - 1) / 2) * 26 + 4, class: 'venn-el', 'text-anchor': 'middle' });
+      t.textContent = ip;
+      s.append(t);
+      texts.set(ip, t);
+    });
+    place(zones.a, 142);
+    place(zones.both, 260);
+    place(zones.b, 378);
+
+    const fmt = (arr) => '{' + [...arr].sort().map((x) => `'${x}'`).join(', ') + '}';
+    const code = h('pre.code-static');
+    const result = h('div.console');
+    const btns = h('div.chip-row');
+
+    function paint() {
+      hl.replaceChildren();
+      texts.forEach((t) => t.classList.remove('in'));
+      if (!current) {
+        code.innerHTML = highlight(`A = ${fmt(A)}\nB = ${fmt(B)}`);
+        result.replaceChildren(h('span.dim', 'Klicke eine Operation, um das Ergebnis zu sehen.'));
+      } else {
+        current.regions.forEach(([c, m]) => {
+          const el = circle(c === 'A' ? CA : CB, 'venn-fill');
+          if (m === 'clipA') el.setAttribute('clip-path', `url(#${uid}clipA)`);
+          else if (m) el.setAttribute('mask', `url(#${uid}${m})`);
+          hl.append(el);
+        });
+        const res = current.calc();
+        res.forEach((ip) => texts.get(ip).classList.add('in'));
+        code.innerHTML = highlight(`A = ${fmt(A)}\nB = ${fmt(B)}\n\n${current.code}`);
+        result.replaceChildren(h('div', fmt(res) + (res.length ? '' : ' → set()')), h('div.dim', `${current.label}: ${res.length} Element(e). Die Reihenfolge in einem Set ist nicht festgelegt.`));
+      }
+      btns.replaceChildren(...ops.map((o) =>
+        h('button.pill' + (o === current ? '.is-active' : ''), { onclick: () => { current = o; ctx.touch(); paint(); } }, h('code', o.code), ' ', o.label)));
+    }
+
+    root.append(
+      h('div.panel', h('div.panel-title', 'Operation'), btns),
+      h('div.scene-grid',
+        h('div.panel', h('div.panel-title', 'Mengen A und B'), s),
+        h('div.panel', h('div.panel-title', 'Code'), code, h('div.panel-title.mt', 'Ergebnis'), result),
+      ),
+      h('p.step-note', 'Faustregel: <code>&amp;</code> = in <em>beiden</em>, <code>|</code> = in <em>mindestens einer</em>, <code>-</code> = in der linken, aber <em>nicht</em> in der rechten Menge.'),
+    );
+    paint();
+    return { destroy() {} };
+  };
+
   /* ------------------------------------------------------------- Export */
 
   /** Szene nach Namen rendern. Rückgabe: Objekt mit destroy(). */

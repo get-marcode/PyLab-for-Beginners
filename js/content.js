@@ -1546,9 +1546,587 @@ q = deque(["A", "B", "C"])
 print(q.popleft(), q)
 `,
     },
-    soon(10, 'linkedlist',    'Linked List',                    'struktur',   '○→○'),
-    soon(11, 'dict',          'Dictionary',                     'struktur',   '{:}'),
-    soon(12, 'set',           'Set',                            'struktur',   '{∪}'),
+    /* ----------------------------------------------------------------- 10 */
+    {
+      id: 10, slug: 'linkedlist', title: 'Linked List',
+      subtitle: 'Knoten und next-Zeiger',
+      group: 'struktur', icon: '○→○', status: 'ready',
+      scenario: 'Musik-Playlist',
+      lead: 'In einer Playlist hängt jeder Song am nächsten: Jeder <strong>Knoten (Node)</strong> kennt seinen Inhalt und einen <code>next</code>-Zeiger auf den Nachfolger. Die Knoten liegen irgendwo im Speicher — eingefügt wird, indem man <strong>nur Zeiger umbiegt</strong>, nicht indem man Elemente verschiebt.',
+
+      scenes: [
+        {
+          id: 'knoten',
+          title: 'Zeiger umbiegen',
+          blurb: 'Vier Songs liegen verstreut im Speicher. Wähle den Vorgänger und füge einen neuen Song ein — beobachte, welche Pfeile sich ändern (und welche Knoten sich nicht bewegen).',
+          visual: 'linkedNodes',
+          config: {
+            songs: ['Intro', 'Midnight', 'Skyline', 'Outro'],
+            newSong: 'Neuer Song',
+          },
+        },
+      ],
+
+      tasks: [
+        {
+          id: 'ln1', level: 'Init', title: 'Die Node-Klasse',
+          scenario: 'Die Playlist-App braucht einen Baustein: Einen Knoten, der einen Songtitel trägt und auf den nächsten Song zeigt.',
+          goal: 'Schreibe die Klasse <code>Node</code>. Der Konstruktor <code>__init__(self, titel, next=None)</code> speichert beide Werte als Attribute <code>self.titel</code> und <code>self.next</code>. Ein einzelner Knoten zeigt standardmäßig auf <code>None</code> (Ende der Kette).',
+          hint: 'Eine Klasse beginnt mit <code>class Node:</code>, darin <code>def __init__(self, titel, next=None):</code>. Mit <code>self.titel = titel</code> speicherst du den Wert im Objekt.',
+          starter: py`class Node:
+    pass
+`,
+          solution: py`class Node:
+    def __init__(self, titel, next=None):
+        self.titel = titel
+        self.next = next
+`,
+          tests: py`
+a = Node("Intro")
+assert a.titel == "Intro", "Node muss den Titel in self.titel speichern."
+assert a.next is None, "Ohne Angabe zeigt next auf None."
+b = Node("Midnight", a)
+assert b.next is a, "Wird ein Nachfolger übergeben, muss self.next auf genau diesen Knoten zeigen."
+assert b.titel == "Midnight"
+`,
+        },
+        {
+          id: 'ln2', level: 'Update', title: 'Song am Ende anhängen',
+          scenario: 'Der Nutzer fügt einen neuen Song ans Ende seiner Playlist an. Die Playlist ist nur über ihren ersten Knoten (<code>head</code>) erreichbar.',
+          goal: 'Schreibe <code>anhaengen(head, titel)</code>. Sie hängt einen neuen Knoten ans Ende der Kette und gibt den <code>head</code> zurück. Ist die Playlist noch leer (<code>head</code> ist <code>None</code>), ist der neue Knoten selbst der Kopf.',
+          hint: 'Wandere mit <code>aktuell = head</code> und <code>while aktuell.next is not None: aktuell = aktuell.next</code> bis zum letzten Knoten, dann <code>aktuell.next = Node(titel)</code>.',
+          starter: py`class Node:
+    def __init__(self, titel, next=None):
+        self.titel = titel
+        self.next = next
+
+def anhaengen(head, titel):
+    pass
+`,
+          solution: py`class Node:
+    def __init__(self, titel, next=None):
+        self.titel = titel
+        self.next = next
+
+def anhaengen(head, titel):
+    neu = Node(titel)
+    if head is None:
+        return neu
+    aktuell = head
+    while aktuell.next is not None:
+        aktuell = aktuell.next
+    aktuell.next = neu
+    return head
+`,
+          tests: py`
+def _liste(h):
+    out = []
+    while h is not None:
+        out.append(h.titel)
+        h = h.next
+    return out
+
+kopf = Node("A", Node("B"))
+ergebnis = anhaengen(kopf, "C")
+assert ergebnis is kopf, "anhaengen muss den unveränderten Kopf zurückgeben."
+assert _liste(kopf) == ["A", "B", "C"], f"Die Kette ist {_liste(kopf)} — erwartet: A → B → C."
+anhaengen(kopf, "D")
+assert _liste(kopf) == ["A", "B", "C", "D"], "Mehrfaches Anhängen muss immer am Ende landen."
+neu = anhaengen(None, "Solo")
+assert neu is not None and neu.titel == "Solo" and neu.next is None, "Bei leerer Playlist ist der neue Knoten der Kopf."
+`,
+        },
+        {
+          id: 'ln3', level: 'Debugging', title: 'Der gerissene Zeiger',
+          scenario: 'Beim Einfügen eines Songs in die Mitte der Playlist verschwindet plötzlich der ganze Rest. Der Zeiger-Tausch ist in der falschen Reihenfolge.',
+          goal: 'Repariere <code>einfuegen_nach(knoten, titel)</code>. Sie soll einen neuen Knoten direkt <strong>hinter</strong> <code>knoten</code> einfügen, ohne den Rest der Kette zu verlieren, und den neuen Knoten zurückgeben.',
+          hint: 'Der neue Knoten muss <em>zuerst</em> auf den bisherigen Nachfolger zeigen (<code>neu.next = knoten.next</code>). Erst danach darf <code>knoten.next</code> auf den neuen Knoten umgebogen werden.',
+          starter: py`class Node:
+    def __init__(self, titel, next=None):
+        self.titel = titel
+        self.next = next
+
+def einfuegen_nach(knoten, titel):
+    neu = Node(titel)
+    knoten.next = neu
+    return neu
+`,
+          solution: py`class Node:
+    def __init__(self, titel, next=None):
+        self.titel = titel
+        self.next = next
+
+def einfuegen_nach(knoten, titel):
+    neu = Node(titel)
+    neu.next = knoten.next
+    knoten.next = neu
+    return neu
+`,
+          tests: py`
+def _liste(h):
+    out = []
+    while h is not None:
+        out.append(h.titel)
+        h = h.next
+    return out
+
+a = Node("A", Node("B", Node("C")))
+x = einfuegen_nach(a, "X")
+assert x.titel == "X", "Die Funktion soll den neuen Knoten zurückgeben."
+assert _liste(a) == ["A", "X", "B", "C"], f"Die Kette ist {_liste(a)} — der Rest nach dem neuen Knoten darf nicht verloren gehen."
+c = a.next.next.next
+assert c.titel == "C"
+y = einfuegen_nach(c, "Z")
+assert _liste(a) == ["A", "X", "B", "C", "Z"], "Einfügen hinter dem letzten Knoten muss auch funktionieren."
+assert y.next is None, "Der neue letzte Knoten zeigt auf None."
+`,
+        },
+        {
+          id: 'ln4', level: 'Edge Case', title: 'Song suchen',
+          scenario: 'Die Suche in der Playlist soll die Position eines Songs liefern. Besonders knifflig: leere Playlists und Songs, die gar nicht vorkommen — die Suche läuft dann bis über das Ende hinaus.',
+          goal: 'Schreibe <code>suche(head, titel)</code>. Sie gibt den <strong>Index</strong> (ab 0) des ersten Knotens mit diesem Titel zurück. Ist die Playlist leer oder der Titel nicht vorhanden, ist das Ergebnis <code>-1</code> — ohne Absturz (<code>AttributeError</code> auf <code>None</code>).',
+          hint: 'Starte mit <code>aktuell = head</code> und <code>index = 0</code>. Die Schleifenbedingung <code>while aktuell is not None</code> deckt leere Listen <em>und</em> das Ende der Kette ab.',
+          starter: py`class Node:
+    def __init__(self, titel, next=None):
+        self.titel = titel
+        self.next = next
+
+def suche(head, titel):
+    pass
+`,
+          solution: py`class Node:
+    def __init__(self, titel, next=None):
+        self.titel = titel
+        self.next = next
+
+def suche(head, titel):
+    aktuell = head
+    index = 0
+    while aktuell is not None:
+        if aktuell.titel == titel:
+            return index
+        aktuell = aktuell.next
+        index += 1
+    return -1
+`,
+          tests: py`
+kopf = Node("Intro", Node("Midnight", Node("Skyline")))
+assert suche(kopf, "Intro") == 0, "Der erste Song hat Index 0."
+assert suche(kopf, "Midnight") == 1, "Midnight steht an Index 1."
+assert suche(kopf, "Skyline") == 2, "Der letzte Song muss gefunden werden."
+assert suche(kopf, "Outro") == -1, "Nicht vorhandener Titel → -1 (nicht abstürzen am Kettenende)."
+assert suche(None, "Intro") == -1, "Leere Playlist → -1."
+dopp = Node("A", Node("B", Node("A")))
+assert suche(dopp, "A") == 0, "Bei Duplikaten zählt der erste Treffer."
+`,
+        },
+        {
+          id: 'ln5', level: 'Algorithmus', title: 'An Position einfügen',
+          scenario: 'Per Drag & Drop zieht der Nutzer einen Song an eine bestimmte Stelle der Playlist. Die Kette muss genau dort aufgetrennt und wieder verbunden werden.',
+          goal: 'Schreibe <code>einfuegen_an(head, index, titel)</code>. Sie fügt einen neuen Knoten an der Position <code>index</code> ein (0 = ganz vorn) und gibt den (ggf. neuen) <code>head</code> zurück. <code>index</code> gleich der Länge hängt am Ende an. Ist <code>index</code> negativ oder größer als die Länge, löse <code>IndexError</code> aus.',
+          hint: 'Index 0 ist ein Sonderfall: der neue Knoten wird zum Kopf (<code>Node(titel, head)</code>). Sonst gehst du <code>index - 1</code> Schritte bis zum Vorgänger und biegst dort die Zeiger um (erst <code>neu.next</code>, dann <code>vorgaenger.next</code>). Zeigt der Weg ins Leere, ist der Index zu groß.',
+          starter: py`class Node:
+    def __init__(self, titel, next=None):
+        self.titel = titel
+        self.next = next
+
+def einfuegen_an(head, index, titel):
+    pass
+`,
+          solution: py`class Node:
+    def __init__(self, titel, next=None):
+        self.titel = titel
+        self.next = next
+
+def einfuegen_an(head, index, titel):
+    if index < 0:
+        raise IndexError("Index außerhalb der Playlist")
+    if index == 0:
+        return Node(titel, head)
+    vorgaenger = head
+    for _ in range(index - 1):
+        if vorgaenger is None:
+            break
+        vorgaenger = vorgaenger.next
+    if vorgaenger is None:
+        raise IndexError("Index außerhalb der Playlist")
+    vorgaenger.next = Node(titel, vorgaenger.next)
+    return head
+`,
+          tests: py`
+def _liste(h):
+    out = []
+    while h is not None:
+        out.append(h.titel)
+        h = h.next
+    return out
+
+def _bauen(*titel):
+    h = None
+    for t in reversed(titel):
+        h = Node(t, h)
+    return h
+
+k = _bauen("A", "B", "C")
+k = einfuegen_an(k, 0, "X")
+assert _liste(k) == ["X", "A", "B", "C"], f"Einfügen an Index 0 ergibt {_liste(k)} — der neue Knoten muss der Kopf werden."
+k = einfuegen_an(k, 2, "Y")
+assert _liste(k) == ["X", "A", "Y", "B", "C"], f"Einfügen an Index 2 ergibt {_liste(k)}."
+k = einfuegen_an(k, 5, "Z")
+assert _liste(k) == ["X", "A", "Y", "B", "C", "Z"], "Index gleich der Länge hängt am Ende an."
+assert _liste(einfuegen_an(None, 0, "Solo")) == ["Solo"], "In eine leere Playlist an Index 0 einfügen."
+for bad in (-1, 4):
+    try:
+        einfuegen_an(_bauen("A", "B", "C"), bad, "Q")
+        raised = False
+    except IndexError:
+        raised = True
+    assert raised, f"Index {bad} bei Länge 3 muss einen IndexError auslösen."
+try:
+    einfuegen_an(None, 1, "Q")
+    raised = False
+except IndexError:
+    raised = True
+assert raised, "In einer leeren Playlist ist nur Index 0 erlaubt."
+`,
+        },
+      ],
+
+      sandbox: py`# Sandbox — Linked List
+class Node:
+    def __init__(self, titel, next=None):
+        self.titel = titel
+        self.next = next
+
+head = Node("Intro", Node("Midnight", Node("Skyline")))
+
+aktuell = head
+while aktuell is not None:
+    print(aktuell.titel, "->", aktuell.next.titel if aktuell.next else "None")
+    aktuell = aktuell.next
+`,
+    },
+    /* ----------------------------------------------------------------- 11 */
+    {
+      id: 11, slug: 'dict', title: 'Dictionary',
+      subtitle: 'Schlüssel-Wert-Paare (Hash Map)',
+      group: 'struktur', icon: '{:}', status: 'ready',
+      scenario: 'Inventar & Preissystem',
+      lead: 'Ein Online-Shop schlägt Preise nach Artikelnamen nach — nicht nach Positionsnummern. Ein <strong>Dictionary</strong> speichert <strong>Schlüssel-Wert-Paare</strong> und findet jeden Eintrag in praktisch konstanter Zeit, weil intern eine <strong>Hash-Tabelle</strong> arbeitet.',
+
+      scenes: [
+        {
+          id: 'hash',
+          title: 'Hash-Tabelle',
+          blurb: 'Der Schlüssel wird durch eine Hash-Funktion zu einer Zahl und landet direkt im passenden Bucket. Speichere Artikel (put) und rufe sie ab (get).',
+          visual: 'hashTable',
+          config: {
+            buckets: 7,
+            keys: ['Laptop', 'Maus', 'Monitor', 'Tastatur', 'Webcam', 'Kabel'],
+            prices: { Laptop: 899, Maus: 19.9, Monitor: 249, Tastatur: 49, Webcam: 59, Kabel: 7.5 },
+          },
+        },
+      ],
+
+      tasks: [
+        {
+          id: 'd1', level: 'Init', title: 'Preisliste anlegen',
+          scenario: 'Der Shop startet mit drei Artikeln. Die Preisliste soll Artikelnamen mit Preisen verbinden.',
+          goal: 'Lege das Dictionary <code>preise</code> an: <code>"Laptop"</code> → <code>899.0</code>, <code>"Maus"</code> → <code>19.9</code>, <code>"Monitor"</code> → <code>249.0</code>. Speichere in <code>anzahl</code> die Anzahl der Artikel (berechnet) und in <code>laptop_preis</code> den Preis des Laptops, <em>aus dem Dictionary gelesen</em>.',
+          hint: 'Dictionaries stehen in geschweiften Klammern: <code>{"schluessel": wert, …}</code>. Zugriff: <code>preise["Laptop"]</code>. Die Anzahl der Paare liefert <code>len()</code>.',
+          starter: py`# Preisliste des Shops
+
+`,
+          solution: py`preise = {"Laptop": 899.0, "Maus": 19.9, "Monitor": 249.0}
+anzahl = len(preise)
+laptop_preis = preise["Laptop"]
+`,
+          tests: py`
+assert type(preise) is dict, "preise muss ein Dictionary sein (geschweifte Klammern mit Doppelpunkten)."
+assert preise == {"Laptop": 899.0, "Maus": 19.9, "Monitor": 249.0}, "Das Dictionary enthält nicht genau die drei Artikel mit ihren Preisen."
+assert anzahl == 3 and "len(" in _source, "anzahl soll mit len() berechnet werden."
+assert laptop_preis == 899.0 and 'preise["Laptop"]' in _source.replace("'", '"'), "Lies laptop_preis mit preise[\"Laptop\"] aus dem Dictionary."
+`,
+        },
+        {
+          id: 'd2', level: 'Update', title: 'Neu & aktualisiert',
+          scenario: 'Zum Wochenstart kommt ein neuer Artikel ins Sortiment, und der Lieferant meldet Preisänderungen.',
+          goal: 'Füge <code>"Monitor"</code> mit <code>249.0</code> per <strong>direkter Zuweisung</strong> hinzu. Danach aktualisierst du mit <code>.update()</code> in einem Schritt: <code>"Tastatur"</code> kostet jetzt <code>44.0</code> (Preisänderung) und <code>"Webcam"</code> kommt neu mit <code>59.0</code> dazu.',
+          hint: 'Zuweisung: <code>preise["Monitor"] = 249.0</code>. <code>preise.update({…})</code> fügt neue Schlüssel hinzu <em>und</em> überschreibt vorhandene.',
+          starter: py`preise = {"Maus": 19.9, "Tastatur": 49.0}
+
+# Monitor per Zuweisung, dann Tastatur & Webcam mit update()
+`,
+          solution: py`preise = {"Maus": 19.9, "Tastatur": 49.0}
+
+preise["Monitor"] = 249.0
+preise.update({"Tastatur": 44.0, "Webcam": 59.0})
+`,
+          tests: py`
+assert ".update(" in _source, "Nutze .update() für Tastatur und Webcam."
+assert "[" in _source.split(".update(")[0].split("preise = ")[1], "Füge den Monitor per direkter Zuweisung hinzu: preise[...] = ..."
+assert preise == {"Maus": 19.9, "Tastatur": 44.0, "Monitor": 249.0, "Webcam": 59.0}, f"preise ist {preise} — erwartet: Tastatur 44.0, Monitor und Webcam neu."
+`,
+        },
+        {
+          id: 'd3', level: 'Debugging', title: 'KeyError im Lager',
+          scenario: 'Die Wunschliste eines Kunden enthält einen Artikel, den der Shop nicht führt. Das Skript stürzt mit KeyError ab.',
+          goal: 'Repariere die Schleife mit <code>.get()</code>, sodass drei Zeilen erscheinen: <code>Laptop 899.0</code>, <code>Maus 19.9</code> und <code>Monitor nicht im Sortiment</code>.',
+          hint: '<code>preise[artikel]</code> wirft einen KeyError, wenn der Schlüssel fehlt. <code>preise.get(artikel, ersatzwert)</code> liefert stattdessen den Ersatzwert.',
+          starter: py`preise = {"Laptop": 899.0, "Maus": 19.9}
+wunschliste = ["Laptop", "Maus", "Monitor"]
+
+for artikel in wunschliste:
+    print(artikel, preise[artikel])
+`,
+          solution: py`preise = {"Laptop": 899.0, "Maus": 19.9}
+wunschliste = ["Laptop", "Maus", "Monitor"]
+
+for artikel in wunschliste:
+    print(artikel, preise.get(artikel, "nicht im Sortiment"))
+`,
+          tests: py`
+zeilen = _stdout.strip().splitlines()
+assert zeilen == ["Laptop 899.0", "Maus 19.9", "Monitor nicht im Sortiment"], f"Die Ausgabe ist {zeilen} — erwartet sind drei Zeilen, die letzte mit 'nicht im Sortiment'."
+assert ".get(" in _source, "Nutze .get() mit einem Ersatzwert."
+assert preise == {"Laptop": 899.0, "Maus": 19.9}, "Verändere das Dictionary preise nicht."
+`,
+        },
+        {
+          id: 'd4', level: 'Edge Case', title: 'Produktdetails',
+          scenario: 'Der Katalog speichert pro Artikel ein eigenes Dictionary mit Details (Preis, Lagerbestand, …). Die Detailseite fragt Felder ab, die manchmal fehlen — oder zu einem Artikel, den es nicht gibt.',
+          goal: 'Schreibe <code>produkt_info(katalog, artikel, feld)</code>. Sie gibt <code>katalog[artikel][feld]</code> zurück. Fehlt der Artikel <em>oder</em> das Feld (oder ist der Katalog leer), ist das Ergebnis <code>None</code> — kein <code>KeyError</code>.',
+          hint: 'Hole zuerst die Details mit <code>katalog.get(artikel)</code> (ergibt <code>None</code>, wenn es den Artikel nicht gibt). Nur wenn das nicht <code>None</code> ist, darfst du mit <code>.get(feld)</code> weitermachen.',
+          starter: py`def produkt_info(katalog, artikel, feld):
+    pass
+`,
+          solution: py`def produkt_info(katalog, artikel, feld):
+    details = katalog.get(artikel)
+    if details is None:
+        return None
+    return details.get(feld)
+`,
+          tests: py`
+katalog = {
+    "Laptop": {"preis": 899.0, "lager": 5, "tags": ["tech", "arbeit"]},
+    "Maus": {"preis": 19.9, "lager": 0},
+}
+assert produkt_info(katalog, "Laptop", "preis") == 899.0, "Der Preis des Laptops wird nicht gefunden."
+assert produkt_info(katalog, "Maus", "lager") == 0, "Ein Lagerbestand von 0 ist ein gültiger Wert und kein 'fehlt'."
+assert produkt_info(katalog, "Laptop", "tags") == ["tech", "arbeit"], "Auch Listen als Werte müssen zurückkommen."
+assert produkt_info(katalog, "Maus", "tags") is None, "Fehlendes Feld → None."
+assert produkt_info(katalog, "Webcam", "preis") is None, "Unbekannter Artikel → None."
+assert produkt_info({}, "Laptop", "preis") is None, "Leerer Katalog → None."
+`,
+        },
+        {
+          id: 'd5', level: 'Algorithmus', title: 'Warenkorb-Summe',
+          scenario: 'Der Warenkorb ist ein Dictionary: Artikelname → Details (<code>"preis"</code> und optional <code>"menge"</code>). Für den Checkout muss die Gesamtsumme berechnet werden.',
+          goal: 'Schreibe <code>warenkorb_summe(warenkorb)</code>. Gehe per Schleife durch die <strong>Values</strong> (<code>.values()</code>) des Warenkorbs und addiere <code>preis * menge</code>. Fehlt <code>"menge"</code>, gilt <code>1</code>. Das Ergebnis ist auf 2 Nachkommastellen gerundet, ein leerer Warenkorb ergibt <code>0.0</code>.',
+          hint: 'Mit <code>for position in warenkorb.values():</code> bekommst du direkt die Detail-Dictionaries. Die Menge mit Ersatzwert liefert <code>position.get("menge", 1)</code>.',
+          starter: py`def warenkorb_summe(warenkorb):
+    pass
+`,
+          solution: py`def warenkorb_summe(warenkorb):
+    summe = 0.0
+    for position in warenkorb.values():
+        summe += position["preis"] * position.get("menge", 1)
+    return round(summe, 2)
+`,
+          tests: py`
+assert "values(" in _source, "Gehe mit .values() durch die Positionen."
+korb = {"Laptop": {"preis": 899.0, "menge": 1}, "Maus": {"preis": 19.9, "menge": 2}}
+assert warenkorb_summe(korb) == 938.8, "Für Laptop + 2× Maus passt die Summe nicht."
+assert warenkorb_summe({"Kabel": {"preis": 7.5}}) == 7.5, "Ohne menge gilt 1."
+assert warenkorb_summe({"X": {"preis": 0.1, "menge": 3}}) == 0.3, "Runde auf 2 Nachkommastellen (0.1 * 3 ist in Python 0.30000000000000004)."
+assert warenkorb_summe({}) == 0.0, "Leerer Warenkorb → 0.0."
+assert type(warenkorb_summe({})) is float, "Das Ergebnis muss ein float sein."
+`,
+        },
+      ],
+
+      sandbox: py`# Sandbox — Dictionary
+preise = {"Laptop": 899.0, "Maus": 19.9}
+
+preise["Monitor"] = 249.0
+print(preise)
+print(preise.get("Webcam", "nicht vorhanden"))
+
+for artikel, preis in preise.items():
+    print(f"{artikel:<10} {preis:>8.2f} €")
+
+print("Maus" in preise, len(preise))
+`,
+    },
+    /* ----------------------------------------------------------------- 12 */
+    {
+      id: 12, slug: 'set', title: 'Set',
+      subtitle: 'Mengen ohne Duplikate',
+      group: 'struktur', icon: '{∪}', status: 'ready',
+      scenario: 'IP-Whitelisting & Zugriffsverwaltung',
+      lead: 'Ein Server will wissen, <em>welche</em> IPs zugegriffen haben — nicht wie oft. Ein <strong>Set</strong> speichert jedes Element nur einmal und beherrscht Mengenoperationen wie Schnitt (<code>&amp;</code>), Vereinigung (<code>|</code>) und Differenz (<code>-</code>).',
+
+      scenes: [
+        {
+          id: 'venn',
+          title: 'Mengen-Kreise',
+          blurb: 'Zwei Mengen A und B von IP-Adressen. Klicke eine Operation an und sieh, welche Bereiche und Elemente herauskommen.',
+          visual: 'vennSets',
+          config: {
+            a: ['10.0.0.1', '10.0.0.2', '10.0.0.3', '10.0.0.4'],
+            b: ['10.0.0.3', '10.0.0.4', '10.0.0.5'],
+          },
+        },
+      ],
+
+      tasks: [
+        {
+          id: 'm1', level: 'Init', title: 'Eindeutige IPs',
+          scenario: 'Das Server-Log listet jeden Zugriff einzeln auf, viele IPs mehrfach. Für die Auswertung zählen nur die verschiedenen Besucher.',
+          goal: 'Erzeuge aus der Liste <code>zugriffe</code> das Set <code>eindeutige_ips</code> und speichere in <code>anzahl</code>, wie viele verschiedene IPs es gibt (berechnet).',
+          hint: '<code>set(liste)</code> wirft alle Duplikate weg. Die Anzahl der Elemente liefert <code>len()</code>.',
+          starter: py`zugriffe = ["10.0.0.1", "10.0.0.2", "10.0.0.1", "10.0.0.3", "10.0.0.2"]
+
+# eindeutige_ips, anzahl
+`,
+          solution: py`zugriffe = ["10.0.0.1", "10.0.0.2", "10.0.0.1", "10.0.0.3", "10.0.0.2"]
+
+eindeutige_ips = set(zugriffe)
+anzahl = len(eindeutige_ips)
+`,
+          tests: py`
+assert type(eindeutige_ips) is set, "eindeutige_ips muss ein Set sein."
+assert eindeutige_ips == {"10.0.0.1", "10.0.0.2", "10.0.0.3"}, "Das Set muss jede IP genau einmal enthalten."
+assert anzahl == 3 and "len(" in _source, "anzahl soll mit len() berechnet werden."
+assert len(zugriffe) == 5, "Lass die Liste zugriffe unverändert."
+`,
+        },
+        {
+          id: 'm2', level: 'Update', title: 'Whitelist pflegen',
+          scenario: 'Ein neuer Server darf auf das System zugreifen, ein alter wurde abgeschaltet. Die Whitelist muss angepasst werden.',
+          goal: 'Füge <code>"10.0.0.9"</code> mit <code>add</code> zur Menge <code>whitelist</code> hinzu und entferne <code>"10.0.0.2"</code> mit <code>remove</code>.',
+          hint: '<code>menge.add(x)</code> fügt hinzu (Duplikate schaden nicht), <code>menge.remove(x)</code> entfernt — Vorsicht: Fehlt x, gibt es einen KeyError.',
+          starter: py`whitelist = {"10.0.0.1", "10.0.0.2"}
+
+# add und remove
+`,
+          solution: py`whitelist = {"10.0.0.1", "10.0.0.2"}
+
+whitelist.add("10.0.0.9")
+whitelist.remove("10.0.0.2")
+`,
+          tests: py`
+assert ".add(" in _source, "Nutze add, um die neue IP hinzuzufügen."
+assert ".remove(" in _source, "Nutze remove, um die alte IP zu entfernen."
+assert whitelist == {"10.0.0.1", "10.0.0.9"}, f"whitelist ist {sorted(whitelist)} — erwartet: 10.0.0.1 und 10.0.0.9."
+`,
+        },
+        {
+          id: 'm3', level: 'Debugging', title: 'Doppelte Besucher',
+          scenario: 'Die Besucherstatistik zeigt 5 Besucher, obwohl nur 3 verschiedene IPs im Log stehen: Die Liste <code>eindeutig</code> enthält Duplikate.',
+          goal: 'Repariere die Schleife: <code>eindeutig</code> soll jede IP nur <strong>einmal</strong> enthalten, in der Reihenfolge des ersten Auftretens (<code>["8.8.8.8", "10.0.0.1", "1.1.1.1"]</code>). Am Ende wird <code>3</code> ausgegeben.',
+          hint: 'Merke dir bereits gesehene IPs, z. B. in einem Set <code>gesehen</code>: Nur wenn <code>ip not in gesehen</code>, hängst du sie an und fügst sie zum Set hinzu. (Prüfung auf Set-Zugehörigkeit ist viel schneller als in Listen.)',
+          starter: py`ips = ["8.8.8.8", "10.0.0.1", "8.8.8.8", "10.0.0.1", "1.1.1.1"]
+
+eindeutig = []
+for ip in ips:
+    eindeutig.append(ip)
+
+print(len(eindeutig))
+`,
+          solution: py`ips = ["8.8.8.8", "10.0.0.1", "8.8.8.8", "10.0.0.1", "1.1.1.1"]
+
+eindeutig = []
+gesehen = set()
+for ip in ips:
+    if ip not in gesehen:
+        gesehen.add(ip)
+        eindeutig.append(ip)
+
+print(len(eindeutig))
+`,
+          tests: py`
+assert type(eindeutig) is list, "eindeutig soll eine Liste bleiben (die Reihenfolge ist wichtig)."
+assert eindeutig == ["8.8.8.8", "10.0.0.1", "1.1.1.1"], f"eindeutig ist {eindeutig} — jede IP nur einmal, in Reihenfolge des ersten Auftretens."
+assert _stdout.strip() == "3", "Am Ende soll genau 3 ausgegeben werden."
+assert len(ips) == 5, "Lass die Liste ips unverändert."
+`,
+        },
+        {
+          id: 'm4', level: 'Edge Case', title: 'Leere Mengen',
+          scenario: 'Die Sperrliste kann leer sein, und manchmal soll eine IP entfernt werden, die gar nicht (mehr) gelistet ist. Ein leeres Set zu erzeugen hat außerdem eine Falle: <code>{}</code> ist ein <em>Dictionary</em>!',
+          goal: 'Lege <code>sperrliste</code> als <strong>leeres Set</strong> an. Schreibe außerdem <code>entferne_ip(menge, ip)</code>: Sie entfernt <code>ip</code> aus <code>menge</code> und gibt <code>True</code> zurück, wenn sie vorhanden war — sonst <code>False</code> (ohne <code>KeyError</code>, auch bei leerer Menge).',
+          hint: 'Ein leeres Set entsteht mit <code>set()</code>. Entweder prüfst du vorher mit <code>if ip in menge</code> oder du nutzt <code>discard</code>, das nie einen Fehler wirft.',
+          starter: py`# leeres Set (Vorsicht: {} ist ein Dictionary)
+
+
+def entferne_ip(menge, ip):
+    pass
+`,
+          solution: py`sperrliste = set()
+
+def entferne_ip(menge, ip):
+    if ip in menge:
+        menge.remove(ip)
+        return True
+    return False
+`,
+          tests: py`
+assert type(sperrliste) is set, "sperrliste muss ein Set sein — {} ergibt ein Dictionary, benutze set()."
+assert len(sperrliste) == 0, "sperrliste muss leer sein."
+m = {"10.0.0.1", "10.0.0.2"}
+assert entferne_ip(m, "10.0.0.1") is True, "Vorhandene IP → True."
+assert m == {"10.0.0.2"}, "Die IP muss aus der Menge entfernt werden."
+assert entferne_ip(m, "10.0.0.1") is False, "Nicht (mehr) vorhandene IP → False, kein KeyError."
+leer = set()
+assert entferne_ip(leer, "1.1.1.1") is False, "Auch auf leerer Menge: False statt Absturz."
+assert leer == set(), "Die leere Menge bleibt leer."
+`,
+        },
+        {
+          id: 'm5', level: 'Algorithmus', title: 'Zugriffsanalyse',
+          scenario: 'Zwei Server (A und B) liefern Listen der IPs, die zugegriffen haben. Die Security-Abteilung will wissen, welche IPs auf <em>beiden</em> Servern auftauchten und welche IPs insgesamt <em>nicht</em> auf der Whitelist stehen (also blockiert werden müssen).',
+          goal: 'Schreibe <code>analyse(server_a, server_b, whitelist)</code>. Alle drei Parameter sind Listen/Mengen von IP-Strings. Rückgabe: ein Dictionary mit <code>"gemeinsam"</code> (IPs auf beiden Servern, Schnittmenge <code>&amp;</code>) und <code>"blockiert"</code> (alle Zugriffe beider Server <em>ohne</em> die Whitelist, Vereinigung <code>|</code> und Differenz <code>-</code>) — beide Werte als <strong>Set</strong>.',
+          hint: 'Wandle zuerst mit <code>set(…)</code> um: <code>a = set(server_a)</code>, <code>b = set(server_b)</code>. Dann <code>a &amp; b</code> und <code>(a | b) - set(whitelist)</code>. Leere Listen sind kein Problem — die Operationen funktionieren auch auf leeren Sets.',
+          starter: py`def analyse(server_a, server_b, whitelist):
+    pass
+`,
+          solution: py`def analyse(server_a, server_b, whitelist):
+    a = set(server_a)
+    b = set(server_b)
+    return {
+        "gemeinsam": a & b,
+        "blockiert": (a | b) - set(whitelist),
+    }
+`,
+          tests: py`
+assert "&" in _source and " - " in _source and "|" in _source, "Nutze die Operatoren & (Schnitt), | (Vereinigung) und - (Differenz)."
+r = analyse(["1.1.1.1", "2.2.2.2", "2.2.2.2"], ["2.2.2.2", "3.3.3.3"], {"1.1.1.1"})
+assert r["gemeinsam"] == {"2.2.2.2"}, f"gemeinsam ist {r['gemeinsam']} — nur IPs, die auf beiden Servern vorkommen."
+assert r["blockiert"] == {"2.2.2.2", "3.3.3.3"}, f"blockiert ist {r['blockiert']} — alle IPs außer der Whitelist."
+assert type(r["gemeinsam"]) is set and type(r["blockiert"]) is set, "Beide Ergebnisse müssen Sets sein."
+r2 = analyse([], [], {"1.1.1.1"})
+assert r2 == {"gemeinsam": set(), "blockiert": set()}, "Bei leeren Eingaben sind beide Ergebnisse leere Sets."
+r3 = analyse(["9.9.9.9"], [], set())
+assert r3 == {"gemeinsam": set(), "blockiert": {"9.9.9.9"}}, "Ohne Whitelist ist jede zugegriffene IP blockiert."
+r4 = analyse(["1.1.1.1"], ["1.1.1.1"], ["1.1.1.1"])
+assert r4 == {"gemeinsam": {"1.1.1.1"}, "blockiert": set()}, "Eine Whitelist darf auch als Liste übergeben werden."
+`,
+        },
+      ],
+
+      sandbox: py`# Sandbox — Set
+a = {"10.0.0.1", "10.0.0.2", "10.0.0.3"}
+b = {"10.0.0.3", "10.0.0.4"}
+
+print("Schnitt:     ", sorted(a & b))
+print("Vereinigung: ", sorted(a | b))
+print("Differenz:   ", sorted(a - b))
+print("Symm. Diff.: ", sorted(a ^ b))
+
+print("10.0.0.1" in a)
+`,
+    },
     soon(13, 'rekursion',     'Rekursion',                      'algo',       '↻'),
     soon(14, 'sortieren',     'Sortieralgorithmen (Bubble / Merge)', 'algo',  '⇅'),
     soon(15, 'bst',           'Binary Search Tree (BST)',       'baum',       '⌥'),
