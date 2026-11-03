@@ -2277,6 +2277,366 @@ const Visuals = (() => {
     return { destroy() { token++; } };
   };
 
+  /* ----------------------------------------- Szene: Baum-Traversierung */
+
+  scenes.treeWalk = (root, cfg, ctx) => {
+    const nodes = [];
+    (function build(t, d, parent) {
+      if (!t) return null;
+      const n = { name: t.n, d, parent, l: null, r: null };
+      nodes.push(n);
+      n.l = build(t.l, d + 1, n);
+      n.r = build(t.r, d + 1, n);
+      return n;
+    })(cfg.tree, 0, null);
+    const top = nodes[0];
+    let xi = 0;
+    (function place(n) {
+      if (!n) return;
+      place(n.l);
+      n.x = 40 + xi++ * 66;
+      n.y = 30 + n.d * 64;
+      place(n.r);
+    })(top);
+    const W = xi * 66 + 14;
+    const H = (Math.max(...nodes.map((n) => n.d)) + 1) * 64 + 14;
+
+    const MODES = {
+      pre:  { label: 'Preorder',  hint: 'Wurzel → Links → Rechts', fn: 'preorder',  seq: ['v', 'l', 'r'], why: 'Preorder: Die Wurzel kommt <strong>zuerst</strong> — noch bevor ein Kind angeschaut wird.' },
+      in:   { label: 'Inorder',   hint: 'Links → Wurzel → Rechts', fn: 'inorder',   seq: ['l', 'v', 'r'], why: 'Inorder: Erst ist der <strong>linke</strong> Teilbaum komplett fertig, dann ist die Wurzel dran.' },
+      post: { label: 'Postorder', hint: 'Links → Rechts → Wurzel', fn: 'postorder', seq: ['l', 'r', 'v'], why: 'Postorder: Die Wurzel kommt <strong>zuletzt</strong> — erst wenn beide Kinder erledigt sind.' },
+    };
+    const codeFor = (m) => {
+      const f = MODES[m].fn;
+      const stm = { v: '    print(k.wert)', l: `    ${f}(k.links)`, r: `    ${f}(k.rechts)` };
+      return [`def ${f}(k):`, '    if k is None:', '        return', ...MODES[m].seq.map((s) => stm[s])];
+    };
+
+    let mode = 'pre';
+    let snaps = [];
+    const trace = () => {
+      const M = MODES[mode];
+      const out = [];
+      const stack = [];
+      const res = [];
+      const push = (cur, line, msg) => res.push({ cur, line, msg, out: out.slice(), stack: stack.slice() });
+      (function go(n) {
+        stack.push(n);
+        push(n, 1, `Aufruf <code>${M.fn}(${n.name})</code> — nicht <code>None</code>, also geht es weiter.`);
+        M.seq.forEach((s, i) => {
+          const line = 3 + i;
+          if (s === 'v') {
+            out.push(n);
+            push(n, line, `<strong>${n.name}</strong> wird ausgegeben (Platz ${out.length}). ${M.why}`);
+          } else {
+            const c = s === 'l' ? n.l : n.r;
+            const side = s === 'l' ? 'linkes' : 'rechtes';
+            if (!c) push(n, line, `${n.name} hat kein ${side} Kind: <code>${M.fn}(None)</code> kehrt sofort zurück (Basisfall).`);
+            else {
+              go(c);
+              push(n, line, `Zurück bei <strong>${n.name}</strong>: der ${s === 'l' ? 'linke' : 'rechte'} Teilbaum ist fertig.`);
+            }
+          }
+        });
+        stack.pop();
+      })(top);
+      push(null, -1, `Fertig! ${M.label}: <strong>${out.map((n) => n.name).join(' → ')}</strong>`);
+      return res;
+    };
+
+    const svgEl = svg('svg', { class: 'tw', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Binärbaum aus Ordnern' });
+    svgEl.style.maxWidth = Math.max(W, 320) + 'px';
+    const outEl = h('div.chip-row.tw-out');
+    const pathEl = h('div.call-path');
+    const codeEl = h('div.code-block');
+    const note = h('p.step-note');
+    const modeBtns = Object.keys(MODES).map((m) => h('button.pill', { onclick: () => setMode(m) }, MODES[m].label));
+
+    function draw(s) {
+      svgEl.replaceChildren();
+      nodes.forEach((n) => [n.l, n.r].forEach((c) => c && svgEl.append(svg('line', { x1: n.x, y1: n.y, x2: c.x, y2: c.y, class: 'tw-edge' + (s && s.stack.includes(n) && s.stack.includes(c) ? ' on' : '') }))));
+      nodes.forEach((n) => {
+        const order = s ? s.out.indexOf(n) : -1;
+        const cls = 'tw-node' + (s && s.stack.includes(n) ? ' in-stack' : '') + (s && s.cur === n ? ' cur' : '') + (order >= 0 ? ' done' : '');
+        const g = svg('g', { class: cls });
+        g.append(svg('rect', { x: n.x - 28, y: n.y - 15, width: 56, height: 30, rx: 8 }));
+        const t = svg('text', { x: n.x, y: n.y + 5, 'text-anchor': 'middle' });
+        t.textContent = n.name;
+        g.append(t);
+        if (order >= 0) {
+          g.append(svg('circle', { cx: n.x + 26, cy: n.y - 15, r: 9, class: 'tw-badge' }));
+          const b = svg('text', { x: n.x + 26, y: n.y - 11.5, 'text-anchor': 'middle', class: 'tw-badge-t' });
+          b.textContent = order + 1;
+          g.append(b);
+        }
+        svgEl.append(g);
+      });
+    }
+    function paintCode(line) {
+      codeEl.replaceChildren(...codeFor(mode).map((l, i) => h('div.code-line' + (i === line ? '.is-active' : ''), h('span.ln', i + 1), h('span.src', { html: highlight(l) }))));
+    }
+    function intro() {
+      const M = MODES[mode];
+      draw(null);
+      paintCode(-1);
+      outEl.replaceChildren();
+      pathEl.replaceChildren();
+      note.innerHTML = `<strong>${M.label}</strong> — ${M.hint}. Drücke ▶ Schritt und schau, wann jeder Ordner ausgegeben wird.`;
+    }
+    const ctl = controlBar({
+      total: 0,
+      interval: 950,
+      onStep(i) {
+        ctx.touch();
+        const s = snaps[i];
+        draw(s);
+        paintCode(s.line);
+        outEl.replaceChildren(...s.out.map((n) => h('code.tw-chip', n.name)));
+        pathEl.replaceChildren(...s.stack.flatMap((n, k) => [k ? h('span.sep', '→') : null, h('code', `${MODES[mode].fn}(${n.name})`)]).filter(Boolean));
+        note.innerHTML = s.msg;
+      },
+      onReset: intro,
+    });
+    function setMode(m) {
+      mode = m;
+      modeBtns.forEach((b, i) => b.classList.toggle('is-active', Object.keys(MODES)[i] === m));
+      snaps = trace();
+      ctl.setTotal(snaps.length);
+      ctl.reset();
+    }
+
+    root.append(
+      h('div.panel', h('div.panel-title', 'Reihenfolge wählen'), h('div.chip-row', modeBtns)),
+      h('div.scene-grid',
+        h('div.panel', h('div.panel-title', 'Ordnerbaum'), h('div.bst-wrap', svgEl),
+          h('div.panel-title.mt', 'Aufrufkette'), pathEl),
+        h('div.panel.panel-code', h('div.panel-title', 'Code'), codeEl,
+          h('div.panel-title.mt', 'Ausgabe'), outEl)),
+      note, ctl.el,
+    );
+    setMode('pre');
+    return { destroy: ctl.destroy };
+  };
+
+  /* --------------------------------------------- Szene: Graph-Suche */
+
+  scenes.graphSearch = (root, cfg, ctx) => {
+    const names = Object.keys(cfg.nodes);
+    const adj = {};
+    names.forEach((n) => (adj[n] = []));
+    cfg.edges.forEach(([a, b]) => { adj[a].push(b); adj[b].push(a); });
+
+    let algo = 'bfs';
+    let start = null;
+    let goal = null;
+    let snaps = [];
+
+    function trace() {
+      const res = [];
+      const parent = {};
+      const visited = [];
+      const finish = (cur, frontier, msg) => {
+        const done = cur === goal;
+        let path = null;
+        if (done) {
+          path = [goal];
+          while (path[0] !== start) path.unshift(parent[path[0]]);
+        }
+        res.push({ cur, visited: visited.slice(), frontier, parent: { ...parent }, path, msg });
+        return done;
+      };
+      if (algo === 'bfs') {
+        const seen = new Set([start]);
+        const q = [start];
+        while (q.length) {
+          const cur = q.shift();
+          visited.push(cur);
+          if (cur === goal) {
+            finish(cur, q.slice(), `<strong>${cur}</strong> ist das Ziel! Die Route entsteht rückwärts über die „gekommen von“-Einträge.`);
+            break;
+          }
+          const added = [];
+          adj[cur].forEach((nb) => { if (!seen.has(nb)) { seen.add(nb); parent[nb] = cur; q.push(nb); added.push(nb); } });
+          finish(cur, q.slice(), `Vorne aus der Warteschlange: <strong>${cur}</strong>. ${added.length ? `Neue Nachbarn hinten anstellen: <code>${added.join(', ')}</code>.` : 'Keine neuen Nachbarn — alle schon bekannt.'}`);
+        }
+      } else {
+        const done = new Set();
+        const st = [[start, null]];
+        while (st.length) {
+          const [cur, par] = st.pop();
+          if (done.has(cur)) continue;
+          done.add(cur);
+          if (par) parent[cur] = par;
+          visited.push(cur);
+          if (cur === goal) {
+            finish(cur, [...new Set(st.map((x) => x[0]))], `<strong>${cur}</strong> ist das Ziel! Diese Route muss nicht die kürzeste sein.`);
+            break;
+          }
+          const nbs = adj[cur].filter((x) => !done.has(x));
+          for (let i = nbs.length - 1; i >= 0; i--) st.push([nbs[i], cur]);
+          finish(cur, [...new Set(st.map((x) => x[0]))].filter((x) => !done.has(x)), `Oben vom Stapel: <strong>${cur}</strong>. ${nbs.length ? `Nachbarn <code>${nbs.join(', ')}</code> kommen oben drauf — der erste wird als Nächstes gewählt, es geht erst mal <em>tief</em> hinein.` : 'Sackgasse! Zurück zum letzten offenen Abzweig.'}`);
+        }
+      }
+      return res;
+    }
+
+    const svgEl = svg('svg', { class: 'gr', viewBox: '0 0 540 300', role: 'img', 'aria-label': 'Liniennetz mit Haltestellen' });
+    const frontEl = h('div.chip-row.gr-front');
+    const frontTitle = h('div.panel-title');
+    const note = h('p.step-note');
+    const algoBtns = { bfs: h('button.pill', { onclick: () => setAlgo('bfs') }, 'BFS · Breitensuche'), dfs: h('button.pill', { onclick: () => setAlgo('dfs') }, 'DFS · Tiefensuche') };
+    const adjEl = h('pre.gr-adj');
+
+    function draw(s) {
+      svgEl.replaceChildren();
+      const pathSet = new Set(s && s.path ? s.path : []);
+      const onPath = (a, b) => s && s.path && pathSet.has(a) && pathSet.has(b) && Math.abs(s.path.indexOf(a) - s.path.indexOf(b)) === 1;
+      const seenEdge = (a, b) => s && ((s.parent[a] === b && s.visited.includes(a)) || (s.parent[b] === a && s.visited.includes(b)));
+      cfg.edges.forEach(([a, b]) => {
+        const [x1, y1] = cfg.nodes[a];
+        const [x2, y2] = cfg.nodes[b];
+        svgEl.append(svg('line', { x1, y1, x2, y2, class: 'gr-edge' + (onPath(a, b) ? ' path' : seenEdge(a, b) ? ' seen' : '') }));
+      });
+      names.forEach((n) => {
+        const [x, y] = cfg.nodes[n];
+        const cls = 'gr-node'
+          + (s && s.visited.includes(n) ? ' visited' : '')
+          + (s && s.frontier.includes(n) ? ' front' : '')
+          + (s && s.cur === n ? ' cur' : '')
+          + (pathSet.has(n) ? ' path' : '')
+          + (n === start ? ' is-start' : '') + (n === goal ? ' is-goal' : '');
+        const g = svg('g', { class: cls, tabindex: 0, role: 'button', 'aria-label': 'Haltestelle ' + n });
+        g.append(svg('circle', { cx: x, cy: y, r: 17 }));
+        const t = svg('text', { x, y: y + 34, 'text-anchor': 'middle' });
+        t.textContent = n;
+        g.append(t);
+        if (n === start || n === goal) {
+          const m = svg('text', { x, y: y + 5, 'text-anchor': 'middle', class: 'gr-mark' });
+          m.textContent = n === start ? 'S' : 'Z';
+          g.append(m);
+        }
+        g.addEventListener('click', () => pick(n));
+        g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(n); } });
+        svgEl.append(g);
+      });
+    }
+    function hint() {
+      if (!start) note.innerHTML = 'Klicke eine <strong>Starthaltestelle</strong> (S) im Netz an.';
+      else if (!goal) note.innerHTML = `Start: <strong>${start}</strong>. Klicke jetzt die <strong>Zielhaltestelle</strong> (Z) an.`;
+      else note.innerHTML = `Route von <strong>${start}</strong> nach <strong>${goal}</strong> — drücke ▶ Schritt oder Auto-Play.`;
+    }
+    function paintFront(s) {
+      frontTitle.textContent = algo === 'bfs' ? 'Warteschlange (vorne → hinten)' : 'Stapel (unten → oben)';
+      frontEl.replaceChildren(...(s ? s.frontier : []).map((n) => h('code.tw-chip', n)));
+    }
+    const ctl = controlBar({
+      total: 0,
+      interval: 1000,
+      onStep(i) {
+        ctx.touch();
+        const s = snaps[i];
+        draw(s);
+        paintFront(s);
+        note.innerHTML = s.msg + (s.path ? `<br>Route: <strong>${s.path.join(' → ')}</strong> (${s.path.length - 1} Fahrten, ${s.visited.length} Haltestellen besucht).` : '');
+      },
+      onReset() { draw(null); paintFront(null); hint(); },
+    });
+    function compute() {
+      if (start && goal) { snaps = trace(); ctl.setTotal(snaps.length); } else { snaps = []; ctl.setTotal(0); }
+      ctl.reset();
+    }
+    function pick(n) {
+      if (!start || (start && goal)) { start = n; goal = null; } else if (n !== start) goal = n; else return;
+      compute();
+    }
+    function setAlgo(a) {
+      algo = a;
+      Object.keys(algoBtns).forEach((k) => algoBtns[k].classList.toggle('is-active', k === a));
+      adjEl.textContent = 'netz = {\n' + names.map((n) => `    "${n}": [${adj[n].map((x) => `"${x}"`).join(', ')}],`).join('\n') + '\n}';
+      compute();
+    }
+
+    root.append(
+      h('div.panel', h('div.panel-title', 'Suchverfahren'), h('div.chip-row', algoBtns.bfs, algoBtns.dfs)),
+      h('div.panel', h('div.panel-title', 'Liniennetz (klicke Start, dann Ziel)'), h('div.bst-wrap', svgEl)),
+      h('div.scene-grid',
+        h('div.panel', frontTitle, frontEl),
+        h('div.panel.panel-code', h('div.panel-title', 'So sieht der Graph in Python aus'), adjEl)),
+      note, ctl.el,
+    );
+    setAlgo('bfs');
+    return { destroy: ctl.destroy };
+  };
+
+  /* ------------------------------------- Szene: Klassen & Objekte */
+
+  scenes.objectMemory = (root, cfg, ctx) => {
+    const classEls = {};
+    const classBox = h('div.oo-classes', cfg.classes.map((c) => {
+      const el = h('div.oo-class',
+        h('div.oo-head', h('strong', 'class ' + c.name), h('span.oo-inh', c.parent ? `erbt von ${c.parent}` : 'Basisklasse')),
+        h('div.oo-sub', 'Attribute'), h('div.oo-list', c.attrs.map((a) => h('code', 'self.' + a))),
+        h('div.oo-sub', 'Methoden'), h('div.oo-list', c.methods.map((m) => h('code', m))));
+      classEls[c.name] = el;
+      return el;
+    }));
+    const lineEls = cfg.script.map((s, i) => h('div.code-line', h('span.ln', i + 1), h('span.src', { html: highlight(s.code) })));
+    const objBox = h('div.oo-objects');
+    const note = h('p.step-note');
+    const intro = 'Links steht die Blaupause, rechts entstehen die echten Objekte. Drücke ▶ Schritt — jede Zeile Code ändert den Speicher.';
+    let objs = {};
+
+    const ctl = controlBar({
+      total: cfg.script.length,
+      interval: 1400,
+      onStep(i) {
+        ctx.touch();
+        const s = cfg.script[i];
+        lineEls.forEach((l, j) => { l.classList.toggle('is-active', j === i); l.classList.toggle('is-done', j < i); });
+        Object.values(classEls).forEach((c) => c.classList.remove('is-used'));
+        if (s.make) {
+          const cells = {};
+          const rows = Object.entries(s.make.attrs).map(([k, v]) => {
+            const cell = h('code.oo-val', v);
+            cells[k] = cell;
+            return h('div.oo-row', h('span', 'self.' + k), cell);
+          });
+          const card = h('div.oo-obj.pop', h('div.oo-obj-head', h('strong', s.make.var), h('span.oo-type', ': ' + s.make.cls)), rows);
+          objBox.append(card);
+          objs[s.make.var] = cells;
+          classEls[s.make.cls].classList.add('is-used');
+        } else if (s.set) {
+          Object.entries(s.set.values).forEach(([k, v]) => {
+            const cell = objs[s.set.var][k];
+            cell.textContent = v;
+            cell.classList.remove('flash');
+            void cell.offsetWidth;
+            cell.classList.add('flash');
+          });
+          classEls[s.set.cls].classList.add('is-used');
+        }
+        note.innerHTML = s.note;
+      },
+      onReset() {
+        objs = {};
+        objBox.replaceChildren();
+        lineEls.forEach((l) => l.classList.remove('is-active', 'is-done'));
+        Object.values(classEls).forEach((c) => c.classList.remove('is-used'));
+        note.textContent = intro;
+      },
+    });
+    note.textContent = intro;
+
+    root.append(
+      h('div.panel.panel-code', h('div.panel-title', 'Dein Programm'), h('div.code-block', lineEls)),
+      h('div.scene-grid',
+        h('div.panel', h('div.panel-title', 'Blaupausen (Klassen)'), classBox),
+        h('div.panel', h('div.panel-title', 'Speicher: Objekte (Instanzen)'), objBox)),
+      note, ctl.el,
+    );
+    return { destroy: ctl.destroy };
+  };
+
   /* ------------------------------------------------------------- Export */
 
   /** Szene nach Namen rendern. Rückgabe: Objekt mit destroy(). */

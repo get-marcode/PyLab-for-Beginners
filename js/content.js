@@ -2799,8 +2799,840 @@ for v in [50, 30, 70, 20, 40, 60, 80]:
 print(in_order(wurzel))   # aufsteigend sortiert!
 `,
     },
-    soon(16, 'traversierung', 'Baum-Traversierungen (In/Pre/Post)', 'baum',  '⌥→'),
-    soon(17, 'graphen',       'Graphen',                        'baum',       '◎—◎'),
-    soon(18, 'oop',           'Klassen & Objekte (OOP)',        'oop',        'cls'),
+    /* ----------------------------------------------------------------- 16 */
+    {
+      id: 16, slug: 'traversierung', title: 'Baum-Traversierungen (In/Pre/Post)',
+      subtitle: 'dieselben Knoten, drei Reihenfolgen',
+      group: 'baum', icon: '⌥→', status: 'ready',
+      scenario: 'Ordnerstruktur ausgeben & aufräumen',
+      lead: 'Eine <strong>Traversierung</strong> besucht jeden Knoten eines Baums genau einmal. Der Trick: Es kommt nur darauf an, <em>wann</em> die Funktion den aktuellen Knoten ausgibt — <strong>vor</strong> den Kindern (Preorder), <strong>zwischen</strong> ihnen (Inorder) oder <strong>nach</strong> ihnen (Postorder). Der Baum bleibt derselbe, nur die Reihenfolge ändert sich.',
+
+      scenes: [
+        {
+          id: 'wanderung',
+          title: 'Der Zeiger wandert',
+          blurb: 'Wähle Preorder, Inorder oder Postorder und drücke ▶ Schritt. Der orange Ordner ist der aktuelle Aufruf, die Zahlen zeigen die Ausgabe-Reihenfolge. Achte auf die eine hervorgehobene Code-Zeile: Sie wandert je nach Modus.',
+          visual: 'treeWalk',
+          config: {
+            tree: {
+              n: 'home',
+              l: { n: 'src', l: { n: 'app' }, r: { n: 'lib' } },
+              r: { n: 'docs', l: { n: 'img' }, r: { n: 'txt' } },
+            },
+          },
+        },
+      ],
+
+      tasks: [
+        {
+          id: 't1', level: 'Init', title: 'Alle Ordner zählen',
+          scenario: 'Dein Dateisystem ist als Baum aus <code>Knoten</code>-Objekten gespeichert. Bevor du Ordner ausgibst, willst du wissen, wie viele es überhaupt gibt — dafür muss die Funktion jeden Knoten einmal besuchen.',
+          goal: 'Schreibe <code>anzahl_ordner(knoten)</code> <strong>rekursiv</strong>: Für <code>None</code> gibt es 0 Ordner, sonst zählt der Knoten selbst (1) plus alle Ordner im linken und im rechten Teilbaum.',
+          hint: 'Basisfall: <code>if knoten is None: return 0</code>. Sonst: <code>return 1 + anzahl_ordner(knoten.links) + anzahl_ordner(knoten.rechts)</code>.',
+          starter: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def anzahl_ordner(knoten):
+    pass
+`,
+          solution: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def anzahl_ordner(knoten):
+    if knoten is None:
+        return 0
+    return 1 + anzahl_ordner(knoten.links) + anzahl_ordner(knoten.rechts)
+`,
+          tests: py`
+home = Knoten("home", Knoten("src", Knoten("app"), Knoten("lib")), Knoten("docs"))
+assert anzahl_ordner(home) == 5, "Der Beispielbaum hat 5 Ordner: home, src, app, lib, docs."
+assert anzahl_ordner(Knoten("solo")) == 1, "Ein einzelner Knoten zählt als 1."
+assert anzahl_ordner(None) == 0, "Für None (kein Ordner) ist die Antwort 0 — das ist der Basisfall."
+assert _source.count("anzahl_ordner(") >= 3, "Die Funktion soll sich selbst für beide Teilbäume aufrufen."
+`,
+        },
+        {
+          id: 't2', level: 'Update', title: 'Preorder-Ausgabe',
+          scenario: 'Der Chef möchte die Ordnerstruktur wie ein Inhaltsverzeichnis lesen: Erst der übergeordnete Ordner, danach seine Unterordner — links vor rechts.',
+          goal: 'Schreibe <code>preorder(knoten)</code>. Sie gibt eine <strong>Liste</strong> der Werte zurück in der Reihenfolge <em>Wurzel → Links → Rechts</em>. Für <code>None</code> ist das Ergebnis eine leere Liste.',
+          hint: 'Listen lassen sich mit <code>+</code> verketten: <code>return [knoten.wert] + preorder(knoten.links) + preorder(knoten.rechts)</code>. Der Wert des Knotens steht <em>vorn</em>, weil er zuerst drankommt.',
+          starter: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def preorder(knoten):
+    pass
+`,
+          solution: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def preorder(knoten):
+    if knoten is None:
+        return []
+    return [knoten.wert] + preorder(knoten.links) + preorder(knoten.rechts)
+`,
+          tests: py`
+wurzel = Knoten("home",
+                Knoten("src", Knoten("app"), Knoten("lib")),
+                Knoten("docs", Knoten("img"), Knoten("txt")))
+assert preorder(wurzel) == ["home", "src", "app", "lib", "docs", "img", "txt"], "Preorder: erst der Knoten selbst, dann der linke, dann der rechte Teilbaum."
+assert preorder(Knoten("x")) == ["x"], "Ein einzelner Knoten ergibt eine Liste mit genau diesem Wert."
+assert preorder(None) == [], "Für None muss eine leere Liste zurückkommen."
+`,
+        },
+        {
+          id: 't3', level: 'Debugging', title: 'Die falsche Reihenfolge',
+          scenario: 'Die Funktion <code>inorder</code> soll die Ordner so ausgeben, dass links vom Elternordner stehende Einträge zuerst kommen. Stattdessen steht ganz vorn immer die Wurzel „home“ — die Bauteile sind in der falschen Reihenfolge verkettet.',
+          goal: 'Repariere <code>inorder(knoten)</code>: Die richtige Reihenfolge ist <em>Links → Wurzel → Rechts</em>.',
+          hint: 'Die Zeile mit <code>return</code> setzt <code>[knoten.wert]</code> an den Anfang. Bei Inorder gehört der Wert in die <strong>Mitte</strong>: erst <code>inorder(knoten.links)</code>, dann <code>[knoten.wert]</code>, dann <code>inorder(knoten.rechts)</code>.',
+          starter: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def inorder(knoten):
+    if knoten is None:
+        return []
+    return [knoten.wert] + inorder(knoten.links) + inorder(knoten.rechts)
+`,
+          solution: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def inorder(knoten):
+    if knoten is None:
+        return []
+    return inorder(knoten.links) + [knoten.wert] + inorder(knoten.rechts)
+`,
+          tests: py`
+wurzel = Knoten("home",
+                Knoten("src", Knoten("app"), Knoten("lib")),
+                Knoten("docs", Knoten("img"), Knoten("txt")))
+assert inorder(wurzel) == ["app", "src", "lib", "home", "img", "docs", "txt"], "Inorder: erst der ganze linke Teilbaum, dann der Knoten, dann der rechte Teilbaum."
+suchbaum = Knoten(50, Knoten(30, Knoten(20), Knoten(40)), Knoten(70, Knoten(60), Knoten(80)))
+assert inorder(suchbaum) == [20, 30, 40, 50, 60, 70, 80], "Bei einem Suchbaum liefert Inorder die Werte aufsteigend sortiert."
+assert inorder(None) == [], "Für None muss eine leere Liste zurückkommen."
+`,
+        },
+        {
+          id: 't4', level: 'Edge Case', title: 'Leerer Baum, einzelner Knoten',
+          scenario: 'Die Funktion soll den ersten und den letzten Ordner der Inorder-Liste melden. Das klappt — bis jemand einen komplett leeren Ordnerbaum übergibt: Dann gibt es weder einen ersten noch einen letzten Eintrag und das Programm stürzt ab.',
+          goal: 'Erweitere <code>erster_und_letzter(wurzel)</code>: Sie gibt ein <strong>Tupel</strong> <code>(erster, letzter)</code> zurück. Bei einem leeren Baum (<code>None</code>) lautet das Ergebnis <code>(None, None)</code>. Bei einem einzelnen Knoten sind beide Werte gleich.',
+          hint: 'Prüfe die Liste, <em>bevor</em> du auf <code>liste[0]</code> zugreifst: <code>if not liste: return (None, None)</code> — eine leere Liste ist „falsch“.',
+          starter: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def inorder(knoten):
+    if knoten is None:
+        return []
+    return inorder(knoten.links) + [knoten.wert] + inorder(knoten.rechts)
+
+def erster_und_letzter(wurzel):
+    liste = inorder(wurzel)
+    return (liste[0], liste[-1])
+`,
+          solution: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def inorder(knoten):
+    if knoten is None:
+        return []
+    return inorder(knoten.links) + [knoten.wert] + inorder(knoten.rechts)
+
+def erster_und_letzter(wurzel):
+    liste = inorder(wurzel)
+    if not liste:
+        return (None, None)
+    return (liste[0], liste[-1])
+`,
+          tests: py`
+suchbaum = Knoten(50, Knoten(30, Knoten(20), Knoten(40)), Knoten(70))
+assert erster_und_letzter(suchbaum) == (20, 70), "Normalfall: erster = 20, letzter = 70."
+assert erster_und_letzter(Knoten("solo")) == ("solo", "solo"), "Ein einzelner Knoten ist zugleich erster und letzter."
+assert erster_und_letzter(None) == (None, None), "Leerer Baum: Rückgabe (None, None) statt Absturz."
+`,
+        },
+        {
+          id: 't5', level: 'Algorithmus', title: 'Verzeichnis löschen (Postorder)',
+          scenario: 'Ein Ordner darf erst gelöscht werden, wenn alle seine Unterordner weg sind — sonst bleiben Dateien ohne Eltern zurück. Du simulierst das Aufräumen, ohne wirklich etwas zu löschen: Die Funktion meldet nur, in welcher Reihenfolge gelöscht würde.',
+          goal: 'Schreibe <code>loesche_verzeichnis(knoten)</code> rekursiv. Sie gibt die Namen in <strong>Postorder</strong> zurück (<em>Links → Rechts → Wurzel</em>), also in der Reihenfolge, in der gelöscht wird. Leerer Baum → leere Liste.',
+          hint: 'Wie Preorder, nur steht der eigene Wert <strong>hinten</strong>: <code>return loesche_verzeichnis(knoten.links) + loesche_verzeichnis(knoten.rechts) + [knoten.wert]</code>. Die Wurzel wird so als Letztes gelöscht.',
+          starter: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def loesche_verzeichnis(knoten):
+    pass
+`,
+          solution: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def loesche_verzeichnis(knoten):
+    if knoten is None:
+        return []
+    return loesche_verzeichnis(knoten.links) + loesche_verzeichnis(knoten.rechts) + [knoten.wert]
+`,
+          tests: py`
+wurzel = Knoten("home",
+                Knoten("src", Knoten("app"), Knoten("lib")),
+                Knoten("docs", Knoten("img"), Knoten("txt")))
+reihenfolge = loesche_verzeichnis(wurzel)
+assert reihenfolge == ["app", "lib", "src", "img", "txt", "docs", "home"], "Postorder: erst beide Kinder, dann der Ordner selbst."
+assert reihenfolge[-1] == "home", "Die Wurzel muss als Allerletztes gelöscht werden."
+assert loesche_verzeichnis(Knoten("leer")) == ["leer"], "Ein einzelner Ordner wird einfach gelöscht."
+assert loesche_verzeichnis(None) == [], "Nichts zu löschen → leere Liste."
+assert _source.count("loesche_verzeichnis(") >= 3, "Die Funktion soll sich selbst für beide Teilbäume aufrufen."
+`,
+        },
+      ],
+
+      sandbox: py`# Sandbox — Baum-Traversierungen
+class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def preorder(k):
+    return [k.wert] + preorder(k.links) + preorder(k.rechts) if k else []
+
+def inorder(k):
+    return inorder(k.links) + [k.wert] + inorder(k.rechts) if k else []
+
+def postorder(k):
+    return postorder(k.links) + postorder(k.rechts) + [k.wert] if k else []
+
+home = Knoten("home",
+              Knoten("src", Knoten("app"), Knoten("lib")),
+              Knoten("docs", Knoten("img"), Knoten("txt")))
+
+print("Preorder: ", preorder(home))
+print("Inorder:  ", inorder(home))
+print("Postorder:", postorder(home))
+`,
+    },
+    /* ----------------------------------------------------------------- 17 */
+    {
+      id: 17, slug: 'graphen', title: 'Graphen',
+      subtitle: 'Knoten, Kanten & Routen',
+      group: 'baum', icon: '◎—◎', status: 'ready',
+      scenario: 'ÖPNV-Routenplaner',
+      lead: 'Ein <strong>Graph</strong> besteht aus <em>Knoten</em> (Haltestellen) und <em>Kanten</em> (Verbindungen). Anders als beim Baum darf es Kreise geben und es gibt keine Wurzel. In Python speicherst du ihn als <strong>Adjazenzliste</strong>: ein Dictionary, das jeder Haltestelle die Liste ihrer Nachbarn zuordnet. Darauf laufen <strong>BFS</strong> (Ebene für Ebene, findet die kürzeste Route) und <strong>DFS</strong> (erst tief, dann zurück).',
+
+      scenes: [
+        {
+          id: 'routen',
+          title: 'Route suchen: BFS & DFS',
+          blurb: 'Klicke erst die Starthaltestelle, dann das Ziel. Wähle BFS oder DFS und beobachte, wie die Suche das Netz erkundet — am Ende leuchtet die gefundene Route auf. Tipp: Von Hbf nach Park findet BFS die kurze Route, DFS macht einen großen Umweg — probiere beide mit demselben Start und Ziel.',
+          visual: 'graphSearch',
+          config: {
+            nodes: {
+              Hbf: [50, 150], Markt: [150, 55], Uni: [150, 245], Park: [270, 150],
+              Dom: [300, 45], Hafen: [310, 255], Zoo: [420, 150], Messe: [500, 150],
+            },
+            edges: [
+              ['Hbf', 'Markt'], ['Hbf', 'Uni'], ['Markt', 'Dom'], ['Markt', 'Park'], ['Uni', 'Park'],
+              ['Park', 'Hafen'], ['Dom', 'Zoo'], ['Hafen', 'Zoo'], ['Zoo', 'Messe'],
+            ],
+          },
+        },
+      ],
+
+      tasks: [
+        {
+          id: 'g1', level: 'Init', title: 'Das Liniennetz als Dictionary',
+          scenario: 'Dein Verkehrsverbund hat fünf Haltestellen. Direkte Verbindungen: Hauptbahnhof–Marktplatz, Hauptbahnhof–Uni, Marktplatz–Dom, Uni–Dom und Dom–Zoo. Jede Verbindung geht in <em>beide</em> Richtungen.',
+          goal: 'Lege die Variable <code>netz</code> an: ein Dictionary, in dem jede Haltestelle (String) auf die <strong>Liste ihrer Nachbarhaltestellen</strong> zeigt. Die Reihenfolge innerhalb der Listen ist egal.',
+          hint: 'Beginne mit <code>"Hauptbahnhof": ["Marktplatz", "Uni"]</code>. Vergiss nicht die Rückrichtung: Auch beim <code>"Zoo"</code> steht <code>"Dom"</code> in der Liste.',
+          starter: py`# Haltestelle -> Liste der direkten Nachbarn
+netz = {}
+`,
+          solution: py`netz = {
+    "Hauptbahnhof": ["Marktplatz", "Uni"],
+    "Marktplatz": ["Hauptbahnhof", "Dom"],
+    "Uni": ["Hauptbahnhof", "Dom"],
+    "Dom": ["Marktplatz", "Uni", "Zoo"],
+    "Zoo": ["Dom"],
+}
+`,
+          tests: py`
+assert isinstance(netz, dict) and len(netz) == 5, "netz braucht genau fünf Haltestellen als Schlüssel."
+erwartet = {
+    "Hauptbahnhof": {"Marktplatz", "Uni"},
+    "Marktplatz": {"Hauptbahnhof", "Dom"},
+    "Uni": {"Hauptbahnhof", "Dom"},
+    "Dom": {"Marktplatz", "Uni", "Zoo"},
+    "Zoo": {"Dom"},
+}
+for station, nachbarn in erwartet.items():
+    assert station in netz, f"Die Haltestelle {station} fehlt als Schlüssel."
+    assert isinstance(netz[station], list), f"Die Nachbarn von {station} gehören in eine Liste."
+    assert len(netz[station]) == len(nachbarn) and set(netz[station]) == nachbarn, f"Die Nachbarn von {station} stimmen nicht — denk an beide Richtungen."
+`,
+        },
+        {
+          id: 'g2', level: 'Update', title: 'Neue Verbindung eröffnen',
+          scenario: 'Die Stadt baut eine neue Linie: Zwischen zwei Haltestellen entsteht eine Direktverbindung. Manchmal ist sogar eine der Haltestellen ganz neu im Netz.',
+          goal: 'Schreibe <code>verbindung_hinzufuegen(netz, a, b)</code>. Die Funktion trägt <code>b</code> bei <code>a</code> <strong>und</strong> <code>a</code> bei <code>b</code> ein. Unbekannte Haltestellen werden neu angelegt, doppelte Einträge dürfen nicht entstehen.',
+          hint: '<code>netz.setdefault(a, [])</code> legt eine leere Liste an, falls <code>a</code> noch fehlt. Dann: <code>if b not in netz[a]: netz[a].append(b)</code> — und dasselbe in die andere Richtung.',
+          starter: py`def verbindung_hinzufuegen(netz, a, b):
+    pass
+`,
+          solution: py`def verbindung_hinzufuegen(netz, a, b):
+    netz.setdefault(a, [])
+    netz.setdefault(b, [])
+    if b not in netz[a]:
+        netz[a].append(b)
+    if a not in netz[b]:
+        netz[b].append(a)
+`,
+          tests: py`
+netz = {"A": ["B"], "B": ["A"]}
+verbindung_hinzufuegen(netz, "B", "C")
+assert "C" in netz["B"], "C muss in der Nachbarliste von B stehen."
+assert "B" in netz.get("C", []), "Auch die Rückrichtung zählt: B muss bei C stehen (neue Haltestelle anlegen!)."
+verbindung_hinzufuegen(netz, "A", "B")
+assert netz["A"] == ["B"] and netz["B"].count("A") == 1, "Bestehende Verbindungen dürfen nicht doppelt eingetragen werden."
+verbindung_hinzufuegen(netz, "D", "A")
+assert netz["D"] == ["A"] and "D" in netz["A"], "Auch wenn die erste Haltestelle neu ist, werden beide Richtungen eingetragen."
+verbindung_hinzufuegen(netz, "X", "Y")
+assert netz["X"] == ["Y"] and netz["Y"] == ["X"], "Zwei komplett neue Haltestellen bilden eine eigene kleine Insel."
+`,
+        },
+        {
+          id: 'g3', level: 'Debugging', title: 'Der kaputte Kantenzugriff',
+          scenario: 'Die Auskunft soll sagen, ob man von einer Haltestelle direkt zu einer anderen fährt. Statt „Ja“ oder „Nein“ gibt es nur eine rote Fehlermeldung — der Zugriff auf das Netz ist falsch aufgebaut.',
+          goal: 'Repariere <code>direkt_erreichbar(netz, start, ziel)</code>: Sie liefert <code>True</code>, wenn <code>ziel</code> in der Nachbarliste von <code>start</code> steht, sonst <code>False</code>.',
+          hint: '<code>netz[start]</code> ist eine <strong>Liste</strong>. In einer Liste fragt man mit <code>in</code>, ob ein Eintrag enthalten ist: <code>ziel in netz[start]</code>. Mit <code>[ziel]</code> wäre es ein Index — und der muss eine Zahl sein.',
+          starter: py`def direkt_erreichbar(netz, start, ziel):
+    return netz[start][ziel]
+`,
+          solution: py`def direkt_erreichbar(netz, start, ziel):
+    return ziel in netz[start]
+`,
+          tests: py`
+netz = {"Hbf": ["Markt", "Uni"], "Markt": ["Hbf"], "Uni": ["Hbf"], "Zoo": []}
+assert direkt_erreichbar(netz, "Hbf", "Markt") is True, "Hbf und Markt sind direkt verbunden."
+assert direkt_erreichbar(netz, "Markt", "Hbf") is True, "Die Verbindung gilt auch in Rückrichtung."
+assert direkt_erreichbar(netz, "Markt", "Uni") is False, "Markt und Uni haben keine Direktverbindung."
+assert direkt_erreichbar(netz, "Zoo", "Hbf") is False, "Zoo hat keine Nachbarn."
+`,
+        },
+        {
+          id: 'g4', level: 'Edge Case', title: 'Sackgasse oder unbekannt?',
+          scenario: 'Die App soll Endhaltestellen („Sackgassen“) markieren: Stationen mit genau einer Verbindung. Nutzer tippen aber auch Haltestellen ein, die es gar nicht gibt — und die App stürzt ab, statt höflich „nein“ zu sagen.',
+          goal: 'Erweitere <code>ist_sackgasse(netz, station)</code>: <code>True</code> bei genau einer Verbindung, sonst <code>False</code>. Eine <strong>unbekannte</strong> Haltestelle und eine Haltestelle <strong>ohne</strong> Nachbarn sind keine Sackgasse (<code>False</code>).',
+          hint: 'Der Zugriff <code>netz[station]</code> löst bei unbekannten Schlüsseln einen <code>KeyError</code> aus. Mit <code>netz.get(station, [])</code> bekommst du stattdessen eine leere Liste. Dann nur noch die Länge prüfen.',
+          starter: py`def ist_sackgasse(netz, station):
+    return len(netz[station]) == 1
+`,
+          solution: py`def ist_sackgasse(netz, station):
+    return len(netz.get(station, [])) == 1
+`,
+          tests: py`
+netz = {"Hbf": ["Markt", "Uni"], "Markt": ["Hbf"], "Uni": ["Hbf"], "Insel": []}
+assert ist_sackgasse(netz, "Markt") is True, "Markt hat genau eine Verbindung — das ist eine Sackgasse."
+assert ist_sackgasse(netz, "Hbf") is False, "Hbf hat zwei Verbindungen."
+assert ist_sackgasse(netz, "Insel") is False, "Ohne jede Verbindung ist es keine Sackgasse, sondern eine Insel."
+assert ist_sackgasse(netz, "Nirgendwo") is False, "Unbekannte Haltestelle: False statt KeyError."
+`,
+        },
+        {
+          id: 'g5', level: 'Algorithmus', title: 'Kürzeste Route per BFS',
+          scenario: 'Der Routenplaner bekommt sein Herzstück: Von einer Starthaltestelle soll der Weg mit den <em>wenigsten Fahrten</em> zum Ziel gefunden werden. Genau dafür ist die Breitensuche gemacht — sie erkundet erst alle Nachbarn, dann deren Nachbarn und so weiter.',
+          goal: 'Schreibe <code>finde_route(netz, start, ziel)</code>. Rückgabe: die Route als Liste der Haltestellen <em>inklusive</em> Start und Ziel (kürzeste Route). Gibt es keine Verbindung oder ist eine Haltestelle unbekannt, kommt <code>None</code> zurück. Kreise im Netz dürfen die Suche nicht endlos laufen lassen.',
+          hint: 'Merke dir in einer Warteschlange ganze <strong>Wege</strong> (Listen), startend mit <code>[[start]]</code>. Nimm den vordersten Weg (<code>pop(0)</code> oder <code>deque.popleft()</code>); endet er am Ziel, bist du fertig. Sonst hängst du für jeden noch nicht besuchten Nachbarn einen neuen, um ihn verlängerten Weg hinten an. Besuchte Haltestellen kommen in eine Menge <code>besucht</code>.',
+          starter: py`def finde_route(netz, start, ziel):
+    # 1. Unbekannte Haltestellen -> None
+    # 2. Warteschlange mit dem Weg [start] anlegen, besucht = {start}
+    # 3. Solange Wege warten: vordersten Weg nehmen, Ziel erreicht? -> fertig
+    #    sonst jeden unbesuchten Nachbarn mit verlängertem Weg anhängen
+    # 4. Nichts gefunden -> None
+    pass
+`,
+          solution: py`from collections import deque
+
+def finde_route(netz, start, ziel):
+    if start not in netz or ziel not in netz:
+        return None
+    warte = deque([[start]])
+    besucht = {start}
+    while warte:
+        weg = warte.popleft()
+        if weg[-1] == ziel:
+            return weg
+        for nachbar in netz[weg[-1]]:
+            if nachbar not in besucht:
+                besucht.add(nachbar)
+                warte.append(weg + [nachbar])
+    return None
+`,
+          tests: py`
+netz = {
+    "A": ["B", "C"], "B": ["A", "E"], "C": ["A", "D"],
+    "D": ["C", "E"], "E": ["B", "D", "F"], "F": ["E"],
+    "X": ["Y"], "Y": ["X"],
+}
+assert finde_route(netz, "A", "F") == ["A", "B", "E", "F"], "Die kürzeste Route von A nach F ist A → B → E → F."
+assert finde_route(netz, "F", "C") == ["F", "E", "D", "C"], "Auch rückwärts muss die kürzeste Route gefunden werden (F → E → D → C)."
+assert finde_route(netz, "A", "A") == ["A"], "Start gleich Ziel: die Route besteht nur aus dieser einen Haltestelle."
+assert finde_route(netz, "A", "X") is None, "X liegt auf einer getrennten Insel — keine Route, also None."
+assert finde_route(netz, "A", "Q") is None and finde_route(netz, "Q", "A") is None, "Unbekannte Haltestellen ergeben None."
+ring = {1: [2, 4], 2: [1, 3], 3: [2, 4], 4: [3, 1]}
+r = finde_route(ring, 1, 3)
+assert r is not None and len(r) == 3 and r[0] == 1 and r[-1] == 3, "Im Ring sind es von 1 nach 3 genau zwei Fahrten (3 Haltestellen)."
+assert all(b in ring[a] for a, b in zip(r, r[1:])), "Aufeinanderfolgende Haltestellen der Route müssen direkt verbunden sein."
+`,
+        },
+      ],
+
+      sandbox: py`# Sandbox — Graphen
+from collections import deque
+
+netz = {
+    "Hbf": ["Markt", "Uni"],
+    "Markt": ["Hbf", "Dom", "Park"],
+    "Uni": ["Hbf", "Park"],
+    "Dom": ["Markt", "Zoo"],
+    "Park": ["Markt", "Uni", "Hafen"],
+    "Hafen": ["Park", "Zoo"],
+    "Zoo": ["Dom", "Hafen"],
+}
+
+def bfs_route(start, ziel):
+    warte = deque([[start]])
+    besucht = {start}
+    while warte:
+        weg = warte.popleft()
+        if weg[-1] == ziel:
+            return weg
+        for n in netz[weg[-1]]:
+            if n not in besucht:
+                besucht.add(n)
+                warte.append(weg + [n])
+
+print(bfs_route("Hbf", "Zoo"))   # kürzeste Route
+`,
+    },
+    /* ----------------------------------------------------------------- 18 */
+    {
+      id: 18, slug: 'oop', title: 'Klassen & Objekte (OOP)',
+      subtitle: 'Blaupause, Instanz, Vererbung',
+      group: 'oop', icon: 'cls', status: 'ready',
+      scenario: 'Smart-Home-Steuerung',
+      lead: 'Eine <strong>Klasse</strong> ist eine Blaupause, ein <strong>Objekt</strong> ein konkretes Gerät, das danach gebaut wird. Jedes Objekt hat seine eigenen Attribute (<code>self.…</code>), teilt sich aber die Methoden der Klasse. Mit <strong>Vererbung</strong> übernimmt <code>SmartLight</code> alles von <code>SmartDevice</code> und ergänzt Eigenes. <strong>Polymorphismus</strong> heißt: Du rufst bei jedem Gerät dieselbe Methode auf — und jedes reagiert auf seine Art.',
+
+      scenes: [
+        {
+          id: 'speicher',
+          title: 'Blaupause und Objekte',
+          blurb: 'Links siehst du die Klassen (Blaupausen), rechts entstehen beim Ausführen der Zeilen die echten Objekte. Jede Lampe hat ihre eigenen Werte — schalte nur eine ein und schau, ob die andere reagiert.',
+          visual: 'objectMemory',
+          config: {
+            classes: [
+              { name: 'SmartDevice', parent: null, attrs: ['name', 'ist_an'], methods: ['schalte_ein()', 'schalte_aus()', 'status()'] },
+              { name: 'SmartLight', parent: 'SmartDevice', attrs: ['helligkeit'], methods: ['dimme(prozent)'] },
+              { name: 'Thermostat', parent: 'SmartDevice', attrs: ['temperatur'], methods: ['setze_temperatur(grad)'] },
+            ],
+            script: [
+              {
+                code: 'wohnzimmer_lampe = SmartLight("Wohnzimmer")',
+                make: { var: 'wohnzimmer_lampe', cls: 'SmartLight', attrs: { name: '"Wohnzimmer"', ist_an: 'False', helligkeit: '0' } },
+                note: '<code>SmartLight(…)</code> baut ein neues Objekt nach der Blaupause. <code>__init__</code> legt <code>name</code> und <code>ist_an</code> an (geerbt von <code>SmartDevice</code>) und dazu <code>helligkeit</code>.',
+              },
+              {
+                code: 'kuechen_thermostat = Thermostat("Küche")',
+                make: { var: 'kuechen_thermostat', cls: 'Thermostat', attrs: { name: '"Küche"', ist_an: 'False', temperatur: '20' } },
+                note: 'Ein zweites Objekt aus einer <em>anderen</em> Klasse. Auch es hat <code>name</code> und <code>ist_an</code> geerbt — aber statt <code>helligkeit</code> eine <code>temperatur</code>.',
+              },
+              {
+                code: 'flur_lampe = SmartLight("Flur")',
+                make: { var: 'flur_lampe', cls: 'SmartLight', attrs: { name: '"Flur"', ist_an: 'False', helligkeit: '0' } },
+                note: 'Aus <strong>einer</strong> Blaupause kannst du beliebig viele Objekte bauen. Jedes bekommt seinen eigenen Satz an Attributen.',
+              },
+              {
+                code: 'wohnzimmer_lampe.schalte_ein()',
+                set: { var: 'wohnzimmer_lampe', cls: 'SmartDevice', values: { ist_an: 'True' } },
+                note: 'Die Methode <code>schalte_ein</code> steht in <code>SmartDevice</code> und wird vererbt. Mit <code>self</code> weiß sie, <em>welches</em> Objekt gemeint ist: nur die Wohnzimmerlampe ändert sich, <code>flur_lampe</code> bleibt aus!',
+              },
+              {
+                code: 'wohnzimmer_lampe.dimme(60)',
+                set: { var: 'wohnzimmer_lampe', cls: 'SmartLight', values: { helligkeit: '60' } },
+                note: '<code>dimme</code> gibt es nur in <code>SmartLight</code>. Das Thermostat könnte das nicht — es kennt diese Methode nicht.',
+              },
+              {
+                code: 'kuechen_thermostat.setze_temperatur(22)',
+                set: { var: 'kuechen_thermostat', cls: 'Thermostat', values: { temperatur: '22' } },
+                note: 'Jedes Objekt verwaltet seinen eigenen Zustand. Fazit: <strong>Klasse = gemeinsames Verhalten</strong>, <strong>Objekt = individueller Zustand</strong>.',
+              },
+            ],
+          },
+        },
+      ],
+
+      tasks: [
+        {
+          id: 'o1', level: 'Init', title: 'Die Basisklasse SmartDevice',
+          scenario: 'Alle Geräte im Smart Home haben etwas gemeinsam: einen Namen, einen An/Aus-Zustand und die Möglichkeit, ein- und auszuschalten. Das gehört in eine gemeinsame Basisklasse.',
+          goal: 'Schreibe die Klasse <code>SmartDevice</code>. <code>__init__(self, name)</code> speichert <code>self.name</code> und setzt <code>self.ist_an = False</code>. Dazu die Methoden <code>schalte_ein()</code>, <code>schalte_aus()</code> und <code>status()</code>. <code>status()</code> liefert den Text <code>"Flurlicht: an"</code> bzw. <code>"Flurlicht: aus"</code> (Name, Doppelpunkt, Zustand).',
+          hint: 'Jede Methode braucht <code>self</code> als ersten Parameter. <code>schalte_ein</code> setzt <code>self.ist_an = True</code>. Für <code>status</code> hilft ein f-String: <code>f"{self.name}: {zustand}"</code> mit <code>zustand = "an" if self.ist_an else "aus"</code>.',
+          starter: py`class SmartDevice:
+    pass
+`,
+          solution: py`class SmartDevice:
+    def __init__(self, name):
+        self.name = name
+        self.ist_an = False
+
+    def schalte_ein(self):
+        self.ist_an = True
+
+    def schalte_aus(self):
+        self.ist_an = False
+
+    def status(self):
+        zustand = "an" if self.ist_an else "aus"
+        return f"{self.name}: {zustand}"
+`,
+          tests: py`
+d = SmartDevice("Flurlicht")
+assert d.name == "Flurlicht", "__init__ muss den Namen in self.name speichern."
+assert d.ist_an is False, "Ein neues Gerät ist zunächst aus (self.ist_an = False)."
+assert d.status() == "Flurlicht: aus", "status() soll z. B. 'Flurlicht: aus' liefern."
+d.schalte_ein()
+assert d.ist_an is True and d.status() == "Flurlicht: an", "Nach schalte_ein() muss das Gerät an sein."
+d.schalte_aus()
+assert d.ist_an is False, "schalte_aus() setzt ist_an wieder auf False."
+a, b = SmartDevice("A"), SmartDevice("B")
+a.schalte_ein()
+assert b.ist_an is False, "Jedes Objekt hat seinen eigenen Zustand — B darf nicht mitgeschaltet werden."
+`,
+        },
+        {
+          id: 'o2', level: 'Update', title: 'SmartLight erbt',
+          scenario: 'Lampen können mehr als nur an und aus: Sie lassen sich dimmen. Du willst nicht alles neu schreiben, sondern die Basisklasse erweitern.',
+          goal: 'Schreibe <code>SmartLight</code> als Unterklasse von <code>SmartDevice</code>. Ihr <code>__init__(self, name)</code> ruft zuerst <code>super().__init__(name)</code> auf und legt dann <code>self.helligkeit = 0</code> an. Die Methode <code>dimme(prozent)</code> setzt die Helligkeit.',
+          hint: '<code>class SmartLight(SmartDevice):</code> — die Basisklasse steht in Klammern. Im <code>__init__</code> sorgt <code>super().__init__(name)</code> dafür, dass <code>name</code> und <code>ist_an</code> weiterhin angelegt werden. <code>schalte_ein</code> musst du nicht noch einmal schreiben: Es wird vererbt.',
+          starter: py`class SmartDevice:
+    def __init__(self, name):
+        self.name = name
+        self.ist_an = False
+
+    def schalte_ein(self):
+        self.ist_an = True
+
+    def schalte_aus(self):
+        self.ist_an = False
+
+    def status(self):
+        zustand = "an" if self.ist_an else "aus"
+        return f"{self.name}: {zustand}"
+
+class SmartLight:
+    pass
+`,
+          solution: py`class SmartDevice:
+    def __init__(self, name):
+        self.name = name
+        self.ist_an = False
+
+    def schalte_ein(self):
+        self.ist_an = True
+
+    def schalte_aus(self):
+        self.ist_an = False
+
+    def status(self):
+        zustand = "an" if self.ist_an else "aus"
+        return f"{self.name}: {zustand}"
+
+class SmartLight(SmartDevice):
+    def __init__(self, name):
+        super().__init__(name)
+        self.helligkeit = 0
+
+    def dimme(self, prozent):
+        self.helligkeit = prozent
+`,
+          tests: py`
+assert issubclass(SmartLight, SmartDevice), "SmartLight muss von SmartDevice erben: class SmartLight(SmartDevice)."
+lampe = SmartLight("Wohnzimmer")
+assert lampe.name == "Wohnzimmer" and lampe.ist_an is False, "name und ist_an kommen aus SmartDevice — ruf super().__init__(name) auf."
+assert lampe.helligkeit == 0, "Eine neue Lampe hat helligkeit = 0."
+lampe.schalte_ein()
+assert lampe.ist_an is True and lampe.status() == "Wohnzimmer: an", "schalte_ein() und status() werden von SmartDevice geerbt."
+lampe.dimme(60)
+assert lampe.helligkeit == 60, "dimme(60) muss die Helligkeit auf 60 setzen."
+assert "super()" in _source, "Nutze super(), um den __init__ der Basisklasse aufzurufen."
+`,
+        },
+        {
+          id: 'o3', level: 'Debugging', title: 'Das vergessene self',
+          scenario: 'Das Küchenthermostat verhält sich seltsam: Es merkt sich keine Temperatur, und beim Auslesen kommt ein Fehler. In der Klasse wurde mehrfach das <code>self</code> vergessen.',
+          goal: 'Repariere <code>Thermostat</code>: Die Temperatur startet bei 20, <code>setze_temperatur(grad)</code> speichert sie am Objekt, und <code>info()</code> liefert z. B. <code>"Küche: 23 Grad"</code>.',
+          hint: 'Drei Fundstellen: (1) In <code>__init__</code> und (2) in <code>setze_temperatur</code> legt <code>temperatur = …</code> nur eine lokale Variable an — es muss <code>self.temperatur = …</code> heißen. (3) <code>def info():</code> braucht <code>self</code> als Parameter, und in der Zeile darunter muss es auch <code>self.temperatur</code> sein.',
+          starter: py`class SmartDevice:
+    def __init__(self, name):
+        self.name = name
+        self.ist_an = False
+
+class Thermostat(SmartDevice):
+    def __init__(self, name):
+        super().__init__(name)
+        temperatur = 20
+
+    def setze_temperatur(self, grad):
+        temperatur = grad
+
+    def info():
+        return f"{self.name}: {self.temperatur} Grad"
+`,
+          solution: py`class SmartDevice:
+    def __init__(self, name):
+        self.name = name
+        self.ist_an = False
+
+class Thermostat(SmartDevice):
+    def __init__(self, name):
+        super().__init__(name)
+        self.temperatur = 20
+
+    def setze_temperatur(self, grad):
+        self.temperatur = grad
+
+    def info(self):
+        return f"{self.name}: {self.temperatur} Grad"
+`,
+          tests: py`
+t = Thermostat("Küche")
+assert hasattr(t, "temperatur"), "Im __init__ fehlt self. vor temperatur — ohne self entsteht nur eine lokale Variable, die verschwindet."
+assert t.temperatur == 20, "Startwert der Temperatur ist 20."
+t.setze_temperatur(23)
+assert t.temperatur == 23, "setze_temperatur muss self.temperatur ändern, nicht nur eine lokale Variable."
+assert t.info() == "Küche: 23 Grad", "info() soll 'Küche: 23 Grad' liefern."
+t2 = Thermostat("Bad")
+assert t2.temperatur == 20, "Jedes Thermostat hat seine eigene Temperatur."
+`,
+        },
+        {
+          id: 'o4', level: 'Edge Case', title: 'Ungültige Rollo-Position',
+          scenario: 'Ein Rollo kennt nur Positionen von 0 (ganz zu) bis 100 (ganz offen). Die App schickt aber manchmal Unsinn: 150, -20 oder sogar den Text „halb“. Das Rollo würde sonst in einen unmöglichen Zustand fahren.',
+          goal: 'Erweitere <code>Rollo.setze_position(prozent)</code>: Nur Zahlen (<code>int</code> oder <code>float</code>) von 0 bis 100 sind erlaubt. Alles andere löst einen <code>ValueError</code> aus — und die bisherige Position bleibt unverändert.',
+          hint: 'Prüfe <em>vor</em> dem Zuweisen: <code>if not isinstance(prozent, (int, float)) or not 0 &lt;= prozent &lt;= 100: raise ValueError("…")</code>. Erst danach <code>self.position = prozent</code>. Die Typprüfung muss zuerst kommen, sonst wirft der Vergleich <code>0 &lt;= "halb"</code> einen anderen Fehler.',
+          starter: py`class SmartDevice:
+    def __init__(self, name):
+        self.name = name
+        self.ist_an = False
+
+class Rollo(SmartDevice):
+    def __init__(self, name):
+        super().__init__(name)
+        self.position = 0      # 0 = ganz zu, 100 = ganz offen
+
+    def setze_position(self, prozent):
+        self.position = prozent
+`,
+          solution: py`class SmartDevice:
+    def __init__(self, name):
+        self.name = name
+        self.ist_an = False
+
+class Rollo(SmartDevice):
+    def __init__(self, name):
+        super().__init__(name)
+        self.position = 0      # 0 = ganz zu, 100 = ganz offen
+
+    def setze_position(self, prozent):
+        if not isinstance(prozent, (int, float)) or not 0 <= prozent <= 100:
+            raise ValueError("Position muss eine Zahl von 0 bis 100 sein")
+        self.position = prozent
+`,
+          tests: py`
+r = Rollo("Schlafzimmer")
+r.setze_position(40)
+assert r.position == 40, "Gültige Werte werden gesetzt."
+r.setze_position(0)
+r.setze_position(100)
+assert r.position == 100, "0 und 100 sind erlaubte Grenzwerte."
+for schlecht in [-1, 101, 250, "halb", None]:
+    try:
+        r.setze_position(schlecht)
+    except ValueError:
+        pass
+    else:
+        assert False, f"{schlecht!r} ist ungültig und soll einen ValueError auslösen."
+    assert r.position == 100, f"Nach dem ungültigen Wert {schlecht!r} darf sich die Position nicht ändern."
+`,
+        },
+        {
+          id: 'o5', level: 'Algorithmus', title: 'Polymorphismus: Alles einschalten',
+          scenario: 'Der Knopf „Ich bin zu Hause“ soll alle Geräte einschalten: die Lampe mit voller Helligkeit, das Thermostat auf Wohlfühltemperatur, das Rollo ganz hoch. Jede Klasse hat dafür ihr eigenes <code>schalte_ein()</code> — du musst nur noch alle durchlaufen.',
+          goal: 'Schreibe <code>alle_einschalten(geraete)</code>: Für jedes Gerät in der Liste wird <code>schalte_ein()</code> aufgerufen. Zurück kommt die Liste der <code>status()</code>-Texte in derselben Reihenfolge. Die Funktion darf <strong>nicht</strong> prüfen, welche Klasse ein Gerät hat (kein <code>isinstance</code>).',
+          hint: 'Das ist die Stärke von Polymorphismus: <code>for geraet in geraete: geraet.schalte_ein()</code> — Python wählt selbst die passende Version der Methode. Sammle in der Schleife <code>geraet.status()</code> in einer Liste, die du am Ende zurückgibst.',
+          starter: py`class SmartDevice:
+    def __init__(self, name):
+        self.name = name
+        self.ist_an = False
+
+    def schalte_ein(self):
+        self.ist_an = True
+
+    def status(self):
+        zustand = "an" if self.ist_an else "aus"
+        return f"{self.name}: {zustand}"
+
+class SmartLight(SmartDevice):
+    def __init__(self, name):
+        super().__init__(name)
+        self.helligkeit = 0
+
+    def schalte_ein(self):
+        super().schalte_ein()
+        self.helligkeit = 100
+
+class Thermostat(SmartDevice):
+    def __init__(self, name):
+        super().__init__(name)
+        self.temperatur = 16
+
+    def schalte_ein(self):
+        super().schalte_ein()
+        self.temperatur = 21
+
+class Rollo(SmartDevice):
+    def __init__(self, name):
+        super().__init__(name)
+        self.position = 0
+
+    def schalte_ein(self):
+        super().schalte_ein()
+        self.position = 100
+
+def alle_einschalten(geraete):
+    pass
+`,
+          solution: py`class SmartDevice:
+    def __init__(self, name):
+        self.name = name
+        self.ist_an = False
+
+    def schalte_ein(self):
+        self.ist_an = True
+
+    def status(self):
+        zustand = "an" if self.ist_an else "aus"
+        return f"{self.name}: {zustand}"
+
+class SmartLight(SmartDevice):
+    def __init__(self, name):
+        super().__init__(name)
+        self.helligkeit = 0
+
+    def schalte_ein(self):
+        super().schalte_ein()
+        self.helligkeit = 100
+
+class Thermostat(SmartDevice):
+    def __init__(self, name):
+        super().__init__(name)
+        self.temperatur = 16
+
+    def schalte_ein(self):
+        super().schalte_ein()
+        self.temperatur = 21
+
+class Rollo(SmartDevice):
+    def __init__(self, name):
+        super().__init__(name)
+        self.position = 0
+
+    def schalte_ein(self):
+        super().schalte_ein()
+        self.position = 100
+
+def alle_einschalten(geraete):
+    berichte = []
+    for geraet in geraete:
+        geraet.schalte_ein()
+        berichte.append(geraet.status())
+    return berichte
+`,
+          tests: py`
+lampe = SmartLight("Wohnzimmer")
+heizung = Thermostat("Küche")
+rollo = Rollo("Bad")
+berichte = alle_einschalten([lampe, heizung, rollo])
+assert berichte == ["Wohnzimmer: an", "Küche: an", "Bad: an"], "Zurückgeben sollst du die status()-Texte aller Geräte, nachdem sie eingeschaltet wurden."
+assert lampe.helligkeit == 100, "Die Lampe muss ihr eigenes schalte_ein() ausführen (Helligkeit 100)."
+assert heizung.temperatur == 21 and rollo.position == 100, "Thermostat (21 Grad) und Rollo (Position 100) müssen ebenfalls ihr eigenes schalte_ein() ausführen."
+
+class Rauchmelder(SmartDevice):
+    def schalte_ein(self):
+        super().schalte_ein()
+        self.scharf = True
+
+melder = Rauchmelder("Flur")
+alle_einschalten([melder])
+assert getattr(melder, "scharf", False) is True, "Auch neue, unbekannte Geräteklassen müssen funktionieren — ruf einfach geraet.schalte_ein() auf."
+assert alle_einschalten([]) == [], "Eine leere Geräteliste ergibt eine leere Liste."
+assert "isinstance" not in _source, "Polymorphismus heißt: nicht nach der Klasse fragen, sondern einfach schalte_ein() aufrufen."
+`,
+        },
+      ],
+
+      sandbox: py`# Sandbox — Klassen & Objekte
+class SmartDevice:
+    def __init__(self, name):
+        self.name = name
+        self.ist_an = False
+
+    def schalte_ein(self):
+        self.ist_an = True
+
+    def status(self):
+        return f"{self.name}: {'an' if self.ist_an else 'aus'}"
+
+class SmartLight(SmartDevice):
+    def __init__(self, name):
+        super().__init__(name)
+        self.helligkeit = 0
+
+    def schalte_ein(self):
+        super().schalte_ein()
+        self.helligkeit = 100
+
+geraete = [SmartDevice("Steckdose"), SmartLight("Wohnzimmer")]
+for g in geraete:
+    g.schalte_ein()          # Polymorphismus: jede Klasse macht es auf ihre Art
+    print(g.status())
+
+print(geraete[1].helligkeit)
+`,
+    },
   ],
 };
