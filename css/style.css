@@ -299,7 +299,7 @@ input[type='range'] { accent-color: var(--accent); width: 100%; }
 .console:empty::before { content: 'Konsole — hier erscheint die Ausgabe.'; color: var(--muted); }
 
 /* ------------------------------------------------ 12. Szenen (Modus A) */
-.code-block { font: 400 13.5px/1.9 var(--mono); }
+.code-block { font: 400 13.5px/1.9 var(--mono); overflow-x: auto; }
 .code-static { margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--code-bg); box-shadow: var(--hair); line-height: 1.7; overflow-x: auto; }
 .code-line { display: flex; align-items: center; gap: 14px; padding: 0 12px; border-radius: 8px; position: relative; transition: background 0.25s, opacity 0.25s; white-space: pre; }
 .code-line .ln { width: 1.4em; text-align: right; color: var(--muted); font-size: 12px; flex: none; }
@@ -964,7 +964,7 @@ dl.cheat dd { margin: 3px 0 0; font-size: 13px; color: var(--ink-2); }
 dl.cheat code { white-space: normal; word-break: break-word; }
 dl.cheat-wide { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px 22px; }
 
-.learn { display: grid; gap: 34px; max-width: 820px; }
+.learn { display: grid; grid-template-columns: minmax(0, 1fr); gap: 34px; max-width: 820px; }
 .learn-sec h2 { margin-bottom: 14px; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; scroll-margin-top: calc(var(--topbar-h) + 20px); }
 .learn-sec { scroll-margin-top: calc(var(--topbar-h) + 20px); }
 .analogy { padding: 18px 20px; border-radius: 16px; font-size: 17px; line-height: 1.65; color: var(--ink-soft); background: rgba(var(--accent-rgb), 0.09); box-shadow: inset 3px 0 0 var(--accent); }
@@ -1011,6 +1011,8 @@ dl.terms dd { margin: 4px 0 0; padding-bottom: 12px; line-height: 1.6; color: va
 }
 
 @media (max-width: 520px) {
+  .tabs { gap: 2px; padding: 4px; }
+  .tab { padding: 10px 2px; font-size: 13px; min-width: 0; }
   .topbar { gap: 10px; padding: 0 12px; }
   .topbar-right { gap: 8px; }
   .brand-name, .crumbs { display: none; }
