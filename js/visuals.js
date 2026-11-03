@@ -1203,6 +1203,407 @@ const Visuals = (() => {
     return { destroy() {} };
   };
 
+  /* ------------------------------------------------- Szene: Liste vs. Tuple */
+
+  scenes.tupleVsList = (root, cfg, ctx) => {
+    let list = [...cfg.values];
+    const tup = [...cfg.values];
+    const pad = (arr, open, close) => open + arr.join(', ') + (open === '(' && arr.length === 1 ? ',' : '') + close;
+
+    const listRepr = h('code.repr');
+    const tupRepr = h('code.repr');
+    const listCells = h('div.vals');
+    const tupCells = h('div.vals');
+    const listLog = h('div.op-log');
+    const tupLog = h('div.op-log');
+    const tupPanel = h('div.panel.panel-immut',
+      h('div.panel-title', 'Tuple ', h('span.badge.no', 'unveränderlich')), tupRepr, tupCells, tupLog);
+    const listPanel = h('div.panel.panel-mut',
+      h('div.panel-title', 'Liste ', h('span.badge.ok', 'veränderbar')), listRepr, listCells, listLog);
+
+    const cells = (arr) => arr.map((v, i) => h('div.vcell', h('small', i), h('b', v)));
+    function paint(flashList) {
+      listRepr.textContent = 'x = ' + pad(list, '[', ']');
+      tupRepr.textContent = 'x = ' + pad(tup, '(', ')');
+      listCells.replaceChildren(...cells(list));
+      tupCells.replaceChildren(...cells(tup));
+      if (flashList) listCells.animate([{ opacity: 0.4 }, { opacity: 1 }], { duration: 300 });
+    }
+    const log = (box, cmd, ok, msg) => {
+      box.prepend(h('div.op' + (ok ? '.is-ok' : '.is-err'), h('span.dim', '>>> '), cmd, h('div', msg)));
+      while (box.children.length > 3) box.lastChild.remove();
+    };
+    const blocked = () => {
+      tupPanel.classList.remove('is-blocked');
+      void tupPanel.offsetWidth;
+      tupPanel.classList.add('is-blocked');
+      tupCells.animate([{ translate: '-8px 0' }, { translate: '8px 0' }, { translate: '-5px 0' }, { translate: '0 0' }], { duration: 380 });
+    };
+
+    const ops = {
+      set: { cmd: 'x[1] = 99', list: () => { list[1] = 99; return 'ok — Index 1 hat jetzt 99'; },
+             err: "TypeError: 'tuple' object does not support item assignment" },
+      append: { cmd: 'x.append(5)', list: () => { list.push(5); return `ok — Länge ist jetzt ${list.length}`; },
+                err: "AttributeError: 'tuple' object has no attribute 'append'" },
+      pop: { cmd: 'x.pop()', list: () => (list.length ? `ok — ${list.pop()} entfernt` : 'IndexError: pop from empty list'),
+             err: "AttributeError: 'tuple' object has no attribute 'pop'" },
+    };
+
+    const buttons = cfg.ops.map((o) => h('button.btn.btn-ghost.fn-btn', {
+      onclick() {
+        ctx.touch();
+        const op = ops[o.id];
+        const res = op.list();
+        log(listLog, op.cmd, !res.startsWith('IndexError'), res);
+        log(tupLog, op.cmd, false, op.err);
+        paint(true);
+        blocked();
+      },
+    }, o.label));
+    buttons.push(h('button.btn.btn-ghost', { onclick: () => { list = [...cfg.values]; listLog.replaceChildren(); tupLog.replaceChildren(); paint(true); } }, '↺ Neu'));
+
+    root.append(
+      h('div.panel', h('div.panel-title', 'Dieselbe Operation auf beide anwenden'), h('div.chip-row', buttons)),
+      h('div.scene-grid', listPanel, tupPanel),
+      h('p.step-note', 'Tuples sind <strong>manipulationssicher</strong>: Es gibt keine Methode, die sie verändert. Willst du einen anderen Wert, baust du ein <em>neues</em> Tuple.'),
+    );
+    root.querySelector('.panel').classList.add('mb');
+    paint();
+    return { destroy() {} };
+  };
+
+  /* ------------------------------------------------- Szene: Entpacken */
+
+  scenes.unpack = (root, cfg, ctx) => {
+    const layer = h('div.fly-layer');
+    const values = cfg.values;
+    const options = [{ id: 2, label: '2 Variablen' }, { id: 3, label: '3 Variablen' }, { id: 4, label: '4 Variablen' }, { id: '*', label: 'lat, *rest' }];
+    let current = 3;
+    const optRow = h('div.scene-tabs');
+    const tupRow = h('div.vals');
+    const targets = h('div.vals');
+    const code = h('pre.code-static');
+    const result = h('div.console');
+
+    const tupCells = values.map((v, i) => h('div.vcell.type-float', h('small', i), h('b', v)));
+    tupRow.append(...tupCells);
+
+    function paintOptions() {
+      optRow.replaceChildren(...options.map((o) =>
+        h('button.pill' + (o.id === current ? '.is-active' : ''), { onclick: () => { current = o.id; ctx.touch(); paintOptions(); run(); } }, o.label)));
+    }
+
+    let token = 0; // verwirft veraltete Durchläufe, wenn schnell gewechselt wird
+    async function run() {
+      const mine = ++token;
+      targets.replaceChildren();
+      result.replaceChildren();
+      const star = current === '*';
+      const names = star ? [cfg.names[0], '*rest'] : cfg.names.slice(0, current);
+      code.innerHTML = highlight(`position = (${values.join(', ')})\n${names.join(', ')} = position`);
+      const boxes = names.map((n) => h('div.vcell.target', h('small', n), h('b', '?')));
+      targets.append(...boxes);
+
+      if (!star && names.length !== values.length) {
+        const msg = names.length < values.length
+          ? `ValueError: too many values to unpack (expected ${names.length})`
+          : `ValueError: not enough values to unpack (expected ${names.length}, got ${values.length})`;
+        result.append(h('div.err', msg), h('div.dim', names.length < values.length ? 'Zu wenige Variablen: ein Wert bliebe übrig.' : 'Zu viele Variablen: ein Fach bliebe leer.'));
+        tupRow.animate([{ translate: '-8px 0' }, { translate: '8px 0' }, { translate: '0 0' }], { duration: 320 });
+        boxes.forEach((b) => b.classList.add('is-err'));
+        return;
+      }
+      const assigned = star ? [String(values[0]), '[' + values.slice(1).join(', ') + ']'] : values.map(String);
+      for (let i = 0; i < boxes.length; i++) {
+        flyChip(layer, tupCells[i], boxes[i], assigned[i], 'float');
+        await sleep(260);
+        if (mine !== token) return;
+        boxes[i].querySelector('b').textContent = assigned[i];
+        boxes[i].classList.add('is-ok');
+      }
+      result.append(h('div', names.map((n, i) => `${n} = ${assigned[i]}`).join('\n')),
+        h('div.dim', star ? '*rest sammelt alle übrigen Werte in einer Liste.' : 'Anzahl der Variablen = Anzahl der Elemente: alles passt.'));
+    }
+
+    root.append(
+      optRow,
+      h('div.panel', h('div.panel-title', 'position (Tuple)'), tupRow, h('div.panel-title.mt', 'Variablen'), targets),
+      h('div.panel', h('div.panel-title', 'Code'), code),
+      h('div.panel', h('div.panel-title', 'Ergebnis'), result),
+      layer,
+    );
+    paintOptions();
+    run();
+    return { destroy() {} };
+  };
+
+  /* ------------------------------------------------- Szene: Tellerstapel */
+
+  scenes.stackPlates = (root, cfg, ctx) => {
+    const H = 44;
+    const GAP = 8;
+    const cap = cfg.capacity;
+    const y = (i) => `translateY(${-i * (H + GAP)}px)`;
+    let items = [];
+    let next = cfg.start.length;
+    let busy = false;
+
+    const well = h('div.plate-well', { style: { height: cap * (H + GAP) + 'px' } });
+    const topTag = h('span.top-tag', '◀ TOP');
+    well.append(topTag);
+    const repr = h('code.repr');
+    const note = h('p.step-note', 'Du kommst nur an das, was oben liegt.');
+
+    const plate = (label, i) => {
+      const el = h('div.plate', label);
+      el.style.transform = y(i);
+      well.append(el);
+      return { label, el };
+    };
+    function paint() {
+      repr.textContent = 'stack = [' + items.map((p) => `"${p.label}"`).join(', ') + ']';
+      items.forEach((p, i) => p.el.classList.toggle('is-top', i === items.length - 1));
+      topTag.style.display = items.length ? '' : 'none';
+      topTag.style.bottom = Math.max(0, (items.length - 1) * (H + GAP) + H / 2 - 9) + 'px';
+    }
+    async function guard(fn) {
+      if (busy) return;
+      busy = true;
+      ctx.touch();
+      await fn();
+      busy = false;
+    }
+
+    const ops = {
+      push: () => guard(async () => {
+        if (items.length >= cap) { note.textContent = 'Der Stapel ist voll (Demo-Grenze).'; return; }
+        const label = cfg.names[next++ % cfg.names.length];
+        const p = plate(label, items.length);
+        items.push(p);
+        p.el.animate([{ opacity: 0, translate: '0 -90px' }, { opacity: 1, translate: '0 0' }], { duration: 420, easing: 'cubic-bezier(.3,1.3,.5,1)' });
+        note.innerHTML = `<code>push</code>: <strong>${label}</strong> landet ganz oben.`;
+        paint();
+        await sleep(300);
+      }),
+      pop: () => guard(async () => {
+        if (!items.length) { note.innerHTML = '<span class="err-text">IndexError: pop from empty list</span> — ein leerer Stack hat nichts zum Entnehmen.'; return; }
+        const p = items.pop();
+        note.innerHTML = `<code>pop</code>: <strong>${p.label}</strong> wird von oben heruntergenommen und zurückgegeben.`;
+        paint();
+        await p.el.animate([{ opacity: 1, translate: '0 0' }, { opacity: 0, translate: '0 -90px' }], { duration: 380, fill: 'forwards' }).finished.catch(() => {});
+        p.el.remove();
+      }),
+      peek: () => guard(async () => {
+        if (!items.length) { note.textContent = 'Der Stapel ist leer — es gibt nichts anzuschauen.'; return; }
+        const p = items[items.length - 1];
+        note.innerHTML = `<code>stack[-1]</code> schaut nur drauf: <strong>${p.label}</strong>. Der Teller bleibt liegen.`;
+        p.el.classList.add('is-peek');
+        await sleep(700);
+        p.el.classList.remove('is-peek');
+      }),
+      bottom: () => guard(async () => {
+        if (!items.length) { note.textContent = 'Der Stapel ist leer.'; return; }
+        const p = items[0];
+        p.el.animate([{ translate: '-8px 0' }, { translate: '8px 0' }, { translate: '-5px 0' }, { translate: '0 0' }], { duration: 400 });
+        p.el.classList.add('is-blocked');
+        note.innerHTML = `<code>stack.pop(0)</code> würde unten ziehen — das ist <strong>kein Stack</strong> mehr. Alles darüber müsste nachrutschen. LIFO erlaubt nur den Zugriff oben.`;
+        await sleep(500);
+        p.el.classList.remove('is-blocked');
+      }),
+      reset: () => guard(async () => {
+        well.querySelectorAll('.plate').forEach((e) => e.remove());
+        items = cfg.start.map((l, i) => plate(l, i));
+        next = cfg.start.length;
+        note.textContent = 'Du kommst nur an das, was oben liegt.';
+        paint();
+      }),
+    };
+
+    root.append(
+      h('div.scene-grid',
+        h('div.panel', h('div.panel-title', 'Stapel'), well),
+        h('div.panel',
+          h('div.panel-title', 'Operationen'),
+          h('div.chip-row',
+            h('button.btn.btn-primary', { onclick: ops.push }, 'push'),
+            h('button.btn.btn-ghost', { onclick: ops.pop }, 'pop'),
+            h('button.btn.btn-ghost', { onclick: ops.peek }, 'peek'),
+            h('button.btn.btn-ghost', { onclick: ops.bottom }, 'unten ziehen?'),
+            h('button.btn.btn-ghost', { onclick: ops.reset }, '↺ Neu')),
+          h('div.panel-title.mt', 'Liste dahinter'), repr,
+          h('ul.legend.mt',
+            h('li', h('code', 'push'), ' = ', h('code', 'liste.append(x)')),
+            h('li', h('code', 'pop'), ' = ', h('code', 'liste.pop()')),
+            h('li', h('code', 'peek'), ' = ', h('code', 'liste[-1]'))),
+        ),
+      ),
+      note,
+    );
+    items = cfg.start.map((l, i) => plate(l, i));
+    paint();
+    return { destroy() {} };
+  };
+
+  /* ------------------------------------------------- Szene: Undo-Historie */
+
+  scenes.undoEditor = (root, cfg, ctx) => {
+    let stack = [];
+    const textEl = h('div.editor-text');
+    const stackEl = h('div.stack');
+    const note = h('p.step-note', 'Jede Aktion wird auf den Stack gelegt. Strg+Z holt die oberste wieder herunter.');
+    const repr = h('code.repr');
+
+    function paint(animateLast) {
+      textEl.replaceChildren(...stack.map((a, i) => h('span.word' + (animateLast && i === stack.length - 1 ? '.is-new' : ''), a.text + ' ')), h('span.caret'));
+      stackEl.replaceChildren(...stack.map((a, i) => h('div.frame' + (i === stack.length - 1 ? '.is-top' : ''), h('div.frame-name', a.label))));
+      repr.textContent = 'undo_stack = [' + stack.map((a) => `"${a.label}"`).join(', ') + ']';
+      if (!stack.length) stackEl.append(h('span.dim.empty', 'leer'));
+    }
+
+    const actionBtns = cfg.actions.map((a) => h('button.btn.btn-ghost', {
+      onclick() {
+        ctx.touch();
+        stack.push(a);
+        note.innerHTML = `<code>undo_stack.append("${a.label}")</code> — die Aktion liegt jetzt oben auf dem Stack.`;
+        paint(true);
+      },
+    }, a.label));
+
+    const undo = h('button.btn.btn-primary', {
+      onclick() {
+        ctx.touch();
+        if (!stack.length) {
+          note.innerHTML = 'Stack leer: <span class="err-text">pop() würde einen IndexError auslösen</span>. Darum prüft ein echter Editor vorher, ob etwas da ist.';
+          return;
+        }
+        const a = stack.pop();
+        note.innerHTML = `<code>undo_stack.pop()</code> → <strong>${a.label}</strong>. Die zuletzt gemachte Aktion wird als Erste rückgängig gemacht (LIFO).`;
+        paint(false);
+      },
+    }, '↶ Strg+Z');
+
+    root.append(
+      h('div.scene-grid',
+        h('div.panel', h('div.panel-title', 'Editor'), textEl, h('div.panel-title.mt', 'Aktion ausführen'), h('div.chip-row', actionBtns, undo)),
+        h('div.panel', h('div.panel-title', 'undo_stack'), stackEl, h('div.panel-title.mt', 'Liste'), repr),
+      ),
+      note,
+    );
+    paint();
+    return { destroy() {} };
+  };
+
+  /* ------------------------------------------------- Szene: Warteschlange */
+
+  scenes.queueLine = (root, cfg, ctx) => {
+    const W = 72;
+    const GAP = 10;
+    const DESK = 112;
+    const cap = cfg.capacity;
+    const x = (i) => `translateX(${DESK + i * (W + GAP)}px)`;
+    let items = [];
+    let nextId = 0;
+    let done = [];
+    let busy = false;
+    let timer = null;
+    let tick = 0;
+
+    const track = h('div.q-track', { style: { width: DESK + cap * (W + GAP) + 'px' } },
+      h('div.q-desk', h('strong', 'Support'), h('small', 'Schalter')));
+    const front = h('span.q-mark.q-front', 'FRONT');
+    const back = h('span.q-mark.q-back', 'BACK');
+    track.append(front, back);
+    const repr = h('code.repr');
+    const stats = h('div.slots-meta');
+    const doneEl = h('div.q-done');
+    const note = h('p.step-note', 'Neue Tickets stellen sich hinten an. Bearbeitet wird immer das vorderste.');
+    const autoBtn = h('button.btn.btn-ghost', { onclick: toggleAuto }, 'Auto-Betrieb');
+
+    const cell = (label, i) => {
+      const el = h('div.qcell', label);
+      el.style.transform = x(i);
+      track.append(el);
+      return { label, el };
+    };
+    function paint() {
+      repr.textContent = 'warteschlange = [' + items.map((t) => `"${t.label}"`).join(', ') + ']';
+      stats.replaceChildren(h('span', 'wartend: ', h('strong', items.length)), h('span', 'bearbeitet: ', h('strong', done.length)));
+      doneEl.textContent = done.length ? 'Bearbeitungsreihenfolge: ' + done.join(' → ') : 'noch nichts bearbeitet';
+      front.style.display = back.style.display = items.length ? '' : 'none';
+      front.style.transform = x(0);
+      back.style.transform = x(Math.max(0, items.length - 1));
+      items.forEach((t, i) => t.el.classList.toggle('is-front', i === 0));
+    }
+    const label = () => cfg.tickets[nextId++ % cfg.tickets.length];
+
+    async function enqueue() {
+      if (busy) return;
+      if (items.length >= cap) { note.textContent = 'Die Schlange ist voll (Demo-Grenze).'; return; }
+      busy = true;
+      ctx.touch();
+      const l = label();
+      const c = cell(l, items.length);
+      items.push(c);
+      c.el.animate([{ opacity: 0, translate: '60px 0' }, { opacity: 1, translate: '0 0' }], { duration: 420, easing: 'cubic-bezier(.2,1.2,.4,1)' });
+      note.innerHTML = `<code>warteschlange.append("${l}")</code> — das Ticket stellt sich <strong>hinten</strong> an.`;
+      paint();
+      await sleep(320);
+      busy = false;
+    }
+    async function dequeue() {
+      if (busy) return;
+      if (!items.length) { note.innerHTML = '<span class="err-text">IndexError: pop from empty list</span> — vor <code>pop(0)</code> prüfen, ob Tickets warten.'; return; }
+      busy = true;
+      ctx.touch();
+      const first = items.shift();
+      done.push(first.label);
+      first.el.style.transform = `translateX(18px)`;
+      first.el.classList.add('is-serving');
+      note.innerHTML = `<code>warteschlange.pop(0)</code> → <strong>${first.label}</strong> wird vorn bearbeitet; alle anderen rücken nach.`;
+      items.forEach((t, i) => (t.el.style.transform = x(i)));
+      paint();
+      await sleep(520);
+      first.el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }).finished.then(() => first.el.remove(), () => first.el.remove());
+      busy = false;
+    }
+    function toggleAuto() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+        autoBtn.textContent = 'Auto-Betrieb';
+        autoBtn.classList.remove('is-on');
+        return;
+      }
+      autoBtn.textContent = 'Stopp';
+      autoBtn.classList.add('is-on');
+      timer = setInterval(() => (tick++ % 3 === 2 ? dequeue() : enqueue()), 1100);
+    }
+    function reset() {
+      if (timer) toggleAuto();
+      track.querySelectorAll('.qcell').forEach((e) => e.remove());
+      nextId = 0;
+      done = [];
+      busy = false;
+      items = Array.from({ length: cfg.start }, (_, i) => cell(label(), i));
+      note.textContent = 'Neue Tickets stellen sich hinten an. Bearbeitet wird immer das vorderste.';
+      paint();
+    }
+
+    root.append(
+      h('div.panel', h('div.panel-title', 'Warteschlange'), h('div.slots-scroll.q-scroll', track)),
+      h('div.panel', h('div.chip-row',
+        h('button.btn.btn-primary', { onclick: enqueue }, '+ Neues Ticket (append)'),
+        h('button.btn.btn-ghost', { onclick: dequeue }, 'Nächstes bearbeiten (pop(0))'),
+        autoBtn,
+        h('button.btn.btn-ghost', { onclick: reset }, '↺ Neu')),
+        h('div.panel-title.mt', 'Liste dahinter'), repr, h('div.mt', stats), h('div.q-done-wrap', doneEl)),
+      note,
+      h('p.muted.small', 'Hinweis: Bei Python-Listen muss <code>pop(0)</code> alle übrigen Elemente nachrücken lassen (O(n)). Für große Warteschlangen nutzt man <code>collections.deque</code> mit <code>popleft()</code>.'),
+    );
+    reset();
+    return { destroy() { if (timer) clearInterval(timer); } };
+  };
+
   /* ------------------------------------------------------------- Export */
 
   /** Szene nach Namen rendern. Rückgabe: Objekt mit destroy(). */

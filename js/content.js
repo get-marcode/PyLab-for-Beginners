@@ -1022,9 +1022,530 @@ print("entfernt:", letzter)
 print("Durchschnitt:", sum(temperaturen) / len(temperaturen))
 `,
     },
-    soon(7,  'tuple',         'Tuple',                          'struktur',   '( )'),
-    soon(8,  'stack',         'Stack (LIFO)',                   'struktur',   '▤↑'),
-    soon(9,  'queue',         'Queue (FIFO)',                   'struktur',   '▤→'),
+    /* ------------------------------------------------------------------ 7 */
+    {
+      id: 7, slug: 'tuple', title: 'Tuple',
+      subtitle: 'unveränderliche Wertepaare',
+      group: 'struktur', icon: '( )', status: 'ready',
+      scenario: 'GPS-Koordinaten & Farb-Konstanten',
+      lead: 'Ein Standort oder eine Farbe darf sich nicht versehentlich ändern. Ein <strong>Tuple</strong> sieht aus wie eine Liste, ist aber <strong>unveränderlich</strong> (immutable): Schreibversuche werden von Python blockiert.',
+
+      scenes: [
+        {
+          id: 'immutable',
+          title: 'Liste vs. Tuple',
+          blurb: 'Dieselben Werte, zweimal gespeichert. Führe dieselbe Operation auf beiden aus und sieh, wer sich wehrt.',
+          visual: 'tupleVsList',
+          config: {
+            values: [48.1372, 11.5756, 519],
+            ops: [
+              { id: 'set',    label: 'x[1] = 99' },
+              { id: 'append', label: 'x.append(5)' },
+              { id: 'pop',    label: 'x.pop()' },
+            ],
+          },
+        },
+        {
+          id: 'unpack',
+          title: 'Entpacken',
+          blurb: 'Ein Tuple lässt sich in Variablen auspacken — aber die Anzahl muss passen. Wähle, wie viele Variablen links stehen.',
+          visual: 'unpack',
+          config: {
+            values: [48.1372, 11.5756, 519],
+            names: ['lat', 'lon', 'hoehe', 'extra'],
+          },
+        },
+      ],
+
+      tasks: [
+        {
+          id: 't1', level: 'Init', title: 'Konstanten anlegen',
+          scenario: 'Die Karten-App speichert den Marienplatz in München und die Farbe Rot als feste Werte, die niemand verändern darf.',
+          goal: 'Lege drei Tuples an: <code>standort</code> = <code>(48.1372, 11.5756)</code> (Breite, Länge), <code>rot</code> = <code>(255, 0, 0)</code> und <code>ein_wert</code> mit nur dem Element <code>42</code>. Achtung bei der letzten: Ein Tuple mit einem Element braucht ein Komma!',
+          hint: 'Tuples stehen in runden Klammern. <code>(42)</code> ist nur die Zahl 42 in Klammern — erst <code>(42,)</code> ist ein Tuple.',
+          starter: py`# Feste Werte der Karten-App
+
+`,
+          solution: py`standort = (48.1372, 11.5756)
+rot = (255, 0, 0)
+ein_wert = (42,)
+`,
+          tests: py`
+assert type(standort) is tuple, "standort muss ein Tuple sein (runde Klammern)."
+assert standort == (48.1372, 11.5756), "standort muss (48.1372, 11.5756) sein."
+assert type(rot) is tuple and rot == (255, 0, 0), "rot muss das Tuple (255, 0, 0) sein."
+assert type(ein_wert) is tuple, "ein_wert ist kein Tuple — fehlt das Komma?"
+assert ein_wert == (42,), "ein_wert muss genau das Element 42 enthalten."
+`,
+        },
+        {
+          id: 't2', level: 'Update', title: 'Wegpunkt auslesen',
+          scenario: 'Ein Wegpunkt der Navigation besteht aus Name, Breite, Länge und Höhe. Die Anzeige braucht einzelne Teile davon.',
+          goal: 'Lies aus <code>wegpunkt</code> aus: <code>name</code> (erstes Element), <code>breite</code> (zweites), <code>hoehe</code> (das <em>letzte</em>, ohne die Position von Hand zu zählen) und <code>koordinaten</code> (ein Tuple aus Breite und Länge, per Slice).',
+          hint: 'Index 0 ist das erste Element, <code>-1</code> das letzte. Ein Slice <code>t[1:3]</code> liefert die Elemente 1 und 2 als neues Tuple.',
+          starter: py`wegpunkt = ("Marienplatz", 48.1374, 11.5755, 519)
+
+# name, breite, hoehe, koordinaten
+`,
+          solution: py`wegpunkt = ("Marienplatz", 48.1374, 11.5755, 519)
+
+name = wegpunkt[0]
+breite = wegpunkt[1]
+hoehe = wegpunkt[-1]
+koordinaten = wegpunkt[1:3]
+`,
+          tests: py`
+assert name == "Marienplatz", "name ist das erste Element (Index 0)."
+assert breite == 48.1374, "breite ist das zweite Element (Index 1)."
+assert hoehe == 519, "hoehe ist das letzte Element."
+assert "[-1]" in _source.replace(" ", ""), "Nutze den Index -1 für das letzte Element."
+assert koordinaten == (48.1374, 11.5755), f"koordinaten ist {koordinaten} — erwartet ein Tuple aus Breite und Länge."
+assert type(koordinaten) is tuple, "Ein Slice eines Tuples bleibt ein Tuple."
+`,
+        },
+        {
+          id: 't3', level: 'Debugging', title: 'Farbe aufhellen',
+          scenario: 'Der Designer will ein helleres Blau. Der Code versucht, den Blau-Anteil der Farb-Konstante direkt zu überschreiben — und Python stoppt mit einem TypeError.',
+          goal: 'Repariere das Skript, sodass <code>farbe</code> am Ende <code>(0, 0, 200)</code> ist und <code>(0, 0, 200)</code> ausgegeben wird. <code>farbe</code> soll ein Tuple bleiben.',
+          hint: 'Tuples kann man nicht ändern, nur <em>ersetzen</em>: baue ein neues Tuple (z. B. mit den alten Werten <code>farbe[0]</code>, <code>farbe[1]</code> und dem neuen Blau) und weise es <code>farbe</code> neu zu.',
+          starter: py`farbe = (0, 0, 255)
+
+# Blau-Anteil auf 200 setzen
+farbe[2] = 200
+
+print(farbe)
+`,
+          solution: py`farbe = (0, 0, 255)
+
+# Blau-Anteil auf 200 setzen
+farbe = (farbe[0], farbe[1], 200)
+
+print(farbe)
+`,
+          tests: py`
+assert type(farbe) is tuple, "farbe muss ein Tuple bleiben — wandle nicht in eine Liste um."
+assert farbe == (0, 0, 200), f"farbe ist {farbe} — erwartet (0, 0, 200)."
+assert "(0, 0, 200)" in _stdout, "Gib die neue Farbe mit print(farbe) aus."
+`,
+        },
+        {
+          id: 't4', level: 'Edge Case', title: 'Position entpacken',
+          scenario: 'GPS-Geräte liefern Positionen unterschiedlich: manche nur mit (Breite, Länge), andere mit Höhe, manche sogar mit Zusatzdaten. Das Entpacken darf nicht mit ValueError abstürzen.',
+          goal: 'Schreibe <code>parse_position(position)</code>. Sie gibt immer ein Tuple <code>(breite, laenge, hoehe)</code> zurück. Fehlt die Höhe, ist sie <code>0</code>. Zusätzliche Werte ab dem 4. Element werden ignoriert. Hat die Position weniger als 2 Werte, löse <code>raise ValueError("ungültige Position")</code> aus.',
+          hint: 'Mit Stern-Entpacken fängst du den Rest ein: <code>breite, laenge, *rest = position</code>. <code>rest</code> ist dann eine Liste — leer, wenn nichts übrig ist.',
+          starter: py`def parse_position(position):
+    # (48.1, 11.5)              -> (48.1, 11.5, 0)
+    # (48.1, 11.5, 519)         -> (48.1, 11.5, 519)
+    # (48.1, 11.5, 519, "gps")  -> (48.1, 11.5, 519)
+    pass
+`,
+          solution: py`def parse_position(position):
+    if len(position) < 2:
+        raise ValueError("ungültige Position")
+    breite, laenge, *rest = position
+    hoehe = rest[0] if rest else 0
+    return (breite, laenge, hoehe)
+`,
+          tests: py`
+assert parse_position((48.1, 11.5)) == (48.1, 11.5, 0), "Ohne Höhe soll 0 eingesetzt werden."
+assert parse_position((48.1, 11.5, 519)) == (48.1, 11.5, 519), "Mit drei Werten bleibt alles gleich."
+assert parse_position((48.1, 11.5, 519, "gps")) == (48.1, 11.5, 519), "Zusatzwerte nach der Höhe werden ignoriert."
+assert type(parse_position((1.0, 2.0))) is tuple, "Das Ergebnis muss ein Tuple sein."
+try:
+    parse_position((48.1,))
+    raised = False
+except ValueError:
+    raised = True
+assert raised, "Bei nur einem Wert muss ein ValueError ausgelöst werden."
+try:
+    parse_position(())
+    raised = False
+except ValueError:
+    raised = True
+assert raised, "Ein leeres Tuple ist ungültig → ValueError."
+`,
+        },
+        {
+          id: 't5', level: 'Algorithmus', title: 'Nächste Palettenfarbe',
+          scenario: 'Ein Bildprogramm soll jede Farbe auf die ähnlichste Farbe einer festen Palette abbilden. Farben sind RGB-Tuples; Ähnlichkeit ist der quadrierte Abstand der drei Kanäle.',
+          goal: 'Schreibe <code>naechste_farbe(farbe, palette)</code>. Sie gibt die Palettenfarbe mit dem kleinsten quadrierten Abstand <code>(r1-r2)² + (g1-g2)² + (b1-b2)²</code> zurück. Bei Gleichstand gewinnt die <strong>erste</strong> in der Palette. Ist die Palette leer, ist das Ergebnis <code>None</code>.',
+          hint: 'Entpacke beide Farben direkt: <code>r, g, b = farbe</code> und <code>pr, pg, pb = kandidat</code>. Merke dir bisher beste Farbe und deren Abstand; ersetze sie nur bei einem <em>echt kleineren</em> Abstand.',
+          starter: py`def naechste_farbe(farbe, palette):
+    pass
+`,
+          solution: py`def naechste_farbe(farbe, palette):
+    r, g, b = farbe
+    beste = None
+    bester_abstand = None
+    for kandidat in palette:
+        pr, pg, pb = kandidat
+        abstand = (r - pr) ** 2 + (g - pg) ** 2 + (b - pb) ** 2
+        if bester_abstand is None or abstand < bester_abstand:
+            beste = kandidat
+            bester_abstand = abstand
+    return beste
+`,
+          tests: py`
+palette = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
+assert naechste_farbe((250, 10, 5), palette) == (255, 0, 0), "(250, 10, 5) liegt am nächsten an Rot."
+assert naechste_farbe((10, 20, 200), palette) == (0, 0, 255), "(10, 20, 200) liegt am nächsten an Blau."
+assert naechste_farbe((0, 240, 30), palette) == (0, 255, 0), "(0, 240, 30) liegt am nächsten an Grün."
+assert naechste_farbe((0, 0, 0), [(1, 0, 0), (0, 1, 0)]) == (1, 0, 0), "Bei Gleichstand gewinnt die erste Palettenfarbe."
+assert naechste_farbe((5, 5, 5), [(5, 5, 5)]) == (5, 5, 5), "Eine identische Farbe hat Abstand 0."
+assert naechste_farbe((1, 2, 3), []) is None, "Bei leerer Palette: None."
+`,
+        },
+      ],
+
+      sandbox: py`# Sandbox — Tuple
+standort = (48.1372, 11.5756, 519)
+breite, laenge, hoehe = standort
+print(breite, laenge, hoehe)
+
+# Versuche mal: standort[0] = 0
+print(standort + (1,))      # ein neues Tuple
+print(len(standort), standort.count(519))
+`,
+    },
+    /* ------------------------------------------------------------------ 8 */
+    {
+      id: 8, slug: 'stack', title: 'Stack (LIFO)',
+      subtitle: 'Last In, First Out',
+      group: 'struktur', icon: '▤↑', status: 'ready',
+      scenario: 'Undo-Historie im Texteditor',
+      lead: 'Strg+Z macht immer die <strong>letzte</strong> Aktion rückgängig. Genau das leistet ein <strong>Stack</strong>: Elemente werden oben draufgelegt (<code>push</code>) und nur oben wieder entnommen (<code>pop</code>). In Python reicht dafür eine Liste mit <code>append</code> und <code>pop()</code>.',
+
+      scenes: [
+        {
+          id: 'teller',
+          title: 'Tellerstapel',
+          blurb: 'Teller kommen nur oben drauf und gehen nur oben weg. Probiere auch, den untersten Teller zu ziehen.',
+          visual: 'stackPlates',
+          config: {
+            capacity: 7,
+            names: ['Dokument A', 'Dokument B', 'Dokument C', 'Dokument D', 'Dokument E', 'Dokument F', 'Dokument G'],
+            start: ['Dokument A', 'Dokument B'],
+          },
+        },
+        {
+          id: 'undo',
+          title: 'Undo-Historie',
+          blurb: 'Jede Aktion wandert auf den Stack. Strg+Z holt die oberste wieder herunter.',
+          visual: 'undoEditor',
+          config: {
+            actions: [
+              { label: '„Hallo“ tippen', text: 'Hallo' },
+              { label: '„Welt“ tippen', text: 'Welt' },
+              { label: '„Python“ tippen', text: 'Python' },
+              { label: '„!“ tippen', text: '!' },
+            ],
+          },
+        },
+      ],
+
+      tasks: [
+        {
+          id: 's1', level: 'Init', title: 'Leere Historie',
+          scenario: 'Der Texteditor startet ohne bisherige Aktionen. Die Undo-Historie ist ein Stack, der mit einer leeren Liste beginnt.',
+          goal: 'Lege den Stack <code>undo_stack</code> als <strong>leere Liste</strong> an. Speichere in <code>ist_leer</code> einen Wahrheitswert (<code>True</code>/<code>False</code>), der <em>berechnet</em> angibt, ob der Stack leer ist.',
+          hint: 'Eine leere Liste ist <code>[]</code>. Ob eine Liste leer ist, verrät <code>len(undo_stack) == 0</code>.',
+          starter: py`# Undo-Historie des Editors
+
+`,
+          solution: py`undo_stack = []
+ist_leer = len(undo_stack) == 0
+`,
+          tests: py`
+assert type(undo_stack) is list, "undo_stack muss eine Liste sein."
+assert undo_stack == [], "undo_stack muss am Anfang leer sein."
+assert ist_leer is True, "ist_leer muss True sein (der Stack ist leer)."
+assert "len(" in _source or "not " in _source, "Berechne ist_leer, statt True einfach hinzuschreiben."
+`,
+        },
+        {
+          id: 's2', level: 'Update', title: 'Push & Pop',
+          scenario: 'Der Nutzer macht drei Änderungen am Dokument und drückt dann einmal Strg+Z.',
+          goal: 'Lege nacheinander die Aktionen <code>"Text eingefügt"</code>, <code>"Fett"</code> und <code>"Zeile gelöscht"</code> mit <code>append</code> auf <code>undo_stack</code>. Mache dann die oberste Aktion mit <code>pop()</code> rückgängig und speichere sie in <code>rueckgaengig</code>.',
+          hint: '<code>push</code> heißt bei Listen <code>append</code>, <code>pop()</code> ohne Argument nimmt das letzte Element weg und gibt es zurück.',
+          starter: py`undo_stack = []
+
+# drei Aktionen pushen, dann eine rückgängig machen
+`,
+          solution: py`undo_stack = []
+
+undo_stack.append("Text eingefügt")
+undo_stack.append("Fett")
+undo_stack.append("Zeile gelöscht")
+
+rueckgaengig = undo_stack.pop()
+`,
+          tests: py`
+assert _source.count(".append(") >= 3, "Lege jede der drei Aktionen mit append auf den Stack."
+assert ".pop(" in _source, "Nutze pop(), um die letzte Aktion zu entfernen."
+assert rueckgaengig == "Zeile gelöscht", f"rueckgaengig ist {rueckgaengig!r} — es muss die zuletzt gepushte Aktion sein."
+assert undo_stack == ["Text eingefügt", "Fett"], f"undo_stack ist {undo_stack} — erwartet: die beiden ersten Aktionen."
+`,
+        },
+        {
+          id: 's3', level: 'Debugging', title: 'Falsche Reihenfolge',
+          scenario: 'Strg+Z macht im Editor die falsche Aktion rückgängig: nicht die letzte, sondern die älteste. Außerdem landet die neue Aktion unten statt oben.',
+          goal: 'Repariere beide LIFO-Fehler. Am Ende soll <code>"Rückgängig: löschen"</code> ausgegeben werden, und <code>undo_stack</code> ist <code>["tippen", "fett", "kursiv"]</code> (neue Aktion oben).',
+          hint: 'Bei einem Stack passiert alles am <em>Ende</em> der Liste: <code>append(x)</code> legt oben drauf, <code>pop()</code> nimmt von oben. Index <code>0</code> ist das <em>untere</em> Ende.',
+          starter: py`undo_stack = ["tippen", "fett", "löschen"]
+
+letzte = undo_stack.pop(0)
+print("Rückgängig:", letzte)
+
+undo_stack.insert(0, "kursiv")
+`,
+          solution: py`undo_stack = ["tippen", "fett", "löschen"]
+
+letzte = undo_stack.pop()
+print("Rückgängig:", letzte)
+
+undo_stack.append("kursiv")
+`,
+          tests: py`
+assert letzte == "löschen", f"letzte ist {letzte!r} — beim Stack kommt die zuletzt hinzugefügte Aktion zuerst heraus."
+assert "Rückgängig: löschen" in _stdout, "Die Ausgabe muss 'Rückgängig: löschen' enthalten."
+assert undo_stack == ["tippen", "fett", "kursiv"], f"undo_stack ist {undo_stack} — die neue Aktion gehört ans Ende (oben)."
+`,
+        },
+        {
+          id: 's4', level: 'Edge Case', title: 'Undo auf leerem Stack',
+          scenario: 'Der Nutzer drückt Strg+Z, obwohl er noch nichts getan hat. pop() auf einer leeren Liste würde den Editor mit einem IndexError abstürzen lassen.',
+          goal: 'Schreibe <code>rueckgaengig(stack)</code>. Sie nimmt die oberste Aktion vom Stack und gibt sie zurück. Ist der Stack leer, gibt sie den Text <code>"Nichts zum Rückgängigmachen"</code> zurück und lässt den Stack unverändert.',
+          hint: 'Prüfe <em>vor</em> dem <code>pop()</code>: <code>if len(stack) == 0:</code> oder kurz <code>if not stack:</code>.',
+          starter: py`def rueckgaengig(stack):
+    pass
+`,
+          solution: py`def rueckgaengig(stack):
+    if not stack:
+        return "Nichts zum Rückgängigmachen"
+    return stack.pop()
+`,
+          tests: py`
+s = ["tippen", "fett"]
+assert rueckgaengig(s) == "fett", "Die oberste Aktion (zuletzt hinzugefügt) muss zurückkommen."
+assert s == ["tippen"], "Die Aktion muss vom Stack entfernt werden."
+assert rueckgaengig(s) == "tippen"
+assert s == [], "Nach zwei Undos ist der Stack leer."
+assert rueckgaengig(s) == "Nichts zum Rückgängigmachen", "Auf leerem Stack: Hinweistext zurückgeben statt abzustürzen."
+assert s == [], "Der leere Stack bleibt leer."
+`,
+        },
+        {
+          id: 's5', level: 'Algorithmus', title: 'Klammerprüfung',
+          scenario: 'Der Code-Editor markiert Syntaxfehler: Zu jeder öffnenden Klammer <code>( [ {</code> muss die passende schließende in der richtigen Reihenfolge kommen. Alle anderen Zeichen sind egal.',
+          goal: 'Schreibe <code>klammern_ok(code)</code>, die <code>True</code> zurückgibt, wenn alle Klammern richtig geschlossen und verschachtelt sind, sonst <code>False</code>. Benutze einen Stack. Beispiele: <code>"print(a[0])"</code> → True, <code>"(]"</code> → False, <code>"(("</code> → False.',
+          hint: 'Gehe Zeichen für Zeichen durch. Öffnende Klammer: pushen. Schließende: oberstes Element muss die passende öffnende sein (sonst <code>False</code>) und wird gepoppt. Am Ende muss der Stack leer sein. Ein Dictionary <code>{")": "(", …}</code> hilft beim Zuordnen.',
+          starter: py`def klammern_ok(code):
+    pass
+`,
+          solution: py`def klammern_ok(code):
+    paare = {")": "(", "]": "[", "}": "{"}
+    stack = []
+    for zeichen in code:
+        if zeichen in "([{":
+            stack.append(zeichen)
+        elif zeichen in paare:
+            if not stack or stack.pop() != paare[zeichen]:
+                return False
+    return len(stack) == 0
+`,
+          tests: py`
+assert klammern_ok("print(a[0])") is True, '"print(a[0])" ist korrekt geklammert.'
+assert klammern_ok("{[()]}") is True, '"{[()]}" ist korrekt verschachtelt.'
+assert klammern_ok("") is True, "Ohne Klammern ist alles in Ordnung."
+assert klammern_ok("x = 5 + 3") is True, "Text ohne Klammern ist in Ordnung."
+assert klammern_ok("(]") is False, '"(]" passt nicht zusammen.'
+assert klammern_ok("{[(])}") is False, '"{[(])}" ist falsch verschachtelt.'
+assert klammern_ok("((") is False, "Offene Klammern am Ende → False."
+assert klammern_ok(")") is False, "Schließende Klammer ohne öffnende → False (kein pop auf leerem Stack!)."
+assert klammern_ok("())(") is False, '"())(" hat die Klammern in falscher Reihenfolge.'
+`,
+        },
+      ],
+
+      sandbox: py`# Sandbox — Stack
+stack = []
+
+stack.append("tippen")
+stack.append("fett")
+stack.append("löschen")
+print("Stack:", stack)
+
+print("Oben:", stack[-1])
+print("Pop:", stack.pop())
+print("Stack:", stack)
+`,
+    },
+    /* ------------------------------------------------------------------ 9 */
+    {
+      id: 9, slug: 'queue', title: 'Queue (FIFO)',
+      subtitle: 'First In, First Out',
+      group: 'struktur', icon: '▤→', status: 'ready',
+      scenario: 'IT-Support-Ticketsystem',
+      lead: 'Im Support gilt: <strong>Wer zuerst kommt, mahlt zuerst.</strong> Neue Tickets stellen sich hinten an, bearbeitet wird vorn. Eine <strong>Queue</strong> arbeitet nach dem FIFO-Prinzip — in Python mit <code>append</code> (hinten rein) und <code>pop(0)</code> (vorn raus).',
+
+      scenes: [
+        {
+          id: 'schlange',
+          title: 'Ticket-Warteschlange',
+          blurb: 'Tickets kommen hinten herein und verlassen die Schlange vorn am Support-Schalter. Im Auto-Betrieb läuft der Support-Alltag von allein.',
+          visual: 'queueLine',
+          config: {
+            capacity: 8,
+            tickets: ['T-101', 'T-102', 'T-103', 'T-104', 'T-105', 'T-106', 'T-107', 'T-108', 'T-109', 'T-110', 'T-111', 'T-112'],
+            start: 3,
+          },
+        },
+      ],
+
+      tasks: [
+        {
+          id: 'q1', level: 'Init', title: 'Warteschlange anlegen',
+          scenario: 'Drei Mitarbeiter haben nacheinander ein Ticket eingereicht: T-101, T-102 und T-103 — in dieser Reihenfolge.',
+          goal: 'Lege die Liste <code>warteschlange</code> mit den drei Tickets in Ankunftsreihenfolge an. Berechne außerdem <code>naechstes</code> (das Ticket, das als Erstes dran ist) und <code>laenge</code> (Anzahl wartender Tickets).',
+          hint: 'Wer zuerst kam, steht vorn — also an Index <code>0</code>. Die Länge liefert <code>len()</code>.',
+          starter: py`# Support-Warteschlange
+
+`,
+          solution: py`warteschlange = ["T-101", "T-102", "T-103"]
+naechstes = warteschlange[0]
+laenge = len(warteschlange)
+`,
+          tests: py`
+assert warteschlange == ["T-101", "T-102", "T-103"], "Die Warteschlange muss die Tickets in Ankunftsreihenfolge enthalten."
+assert naechstes == "T-101", "naechstes ist das Ticket vorn (Index 0), nicht hinten."
+assert laenge == 3 and "len(" in _source, "laenge soll mit len() berechnet werden."
+`,
+        },
+        {
+          id: 'q2', level: 'Update', title: 'Ankunft & Bearbeitung',
+          scenario: 'Während der Support arbeitet, kommt ein neues Ticket an. Danach wird das älteste Ticket bearbeitet und verlässt die Schlange.',
+          goal: 'Hänge <code>"T-3"</code> hinten an <code>warteschlange</code> an (<code>append</code>). Entnimm danach das <strong>vorderste</strong> Ticket mit <code>pop(0)</code> und speichere es in <code>bearbeitet</code>.',
+          hint: '<code>append(x)</code> stellt hinten an. <code>pop(0)</code> nimmt das Element mit Index 0 heraus und gibt es zurück.',
+          starter: py`warteschlange = ["T-1", "T-2"]
+
+# neues Ticket T-3, danach ein Ticket bearbeiten
+`,
+          solution: py`warteschlange = ["T-1", "T-2"]
+
+warteschlange.append("T-3")
+bearbeitet = warteschlange.pop(0)
+`,
+          tests: py`
+assert ".append(" in _source, "Nutze append, um das neue Ticket hinten anzustellen."
+assert ".pop(0)" in _source.replace(" ", ""), "Nutze pop(0), um das vorderste Ticket zu entnehmen."
+assert bearbeitet == "T-1", f"bearbeitet ist {bearbeitet!r} — beim FIFO kommt das älteste Ticket zuerst dran."
+assert warteschlange == ["T-2", "T-3"], f"warteschlange ist {warteschlange} — erwartet: ['T-2', 'T-3']."
+`,
+        },
+        {
+          id: 'q3', level: 'Debugging', title: 'Falsche Entnahme',
+          scenario: 'Ein Praktikant hat die Abarbeitung gebaut — aber die Kunden beschweren sich: Die ältesten Tickets werden zuletzt bearbeitet. Das ist ein Stack-Verhalten, keine Queue!',
+          goal: 'Repariere die Schleife, sodass die Tickets in Ankunftsreihenfolge bearbeitet werden: <code>reihenfolge</code> muss am Ende <code>["T-101", "T-102", "T-103", "T-104"]</code> sein und <code>warteschlange</code> leer.',
+          hint: 'Das Element mit Index <code>len(warteschlange) - 1</code> ist das <em>letzte</em>. Wo steht das Ticket, das am längsten wartet?',
+          starter: py`warteschlange = ["T-101", "T-102", "T-103", "T-104"]
+reihenfolge = []
+
+while len(warteschlange) > 0:
+    ticket = warteschlange.pop(len(warteschlange) - 1)
+    reihenfolge.append(ticket)
+
+print(reihenfolge)
+`,
+          solution: py`warteschlange = ["T-101", "T-102", "T-103", "T-104"]
+reihenfolge = []
+
+while len(warteschlange) > 0:
+    ticket = warteschlange.pop(0)
+    reihenfolge.append(ticket)
+
+print(reihenfolge)
+`,
+          tests: py`
+assert reihenfolge == ["T-101", "T-102", "T-103", "T-104"], f"reihenfolge ist {reihenfolge} — das älteste Ticket muss zuerst bearbeitet werden."
+assert warteschlange == [], "Am Ende muss die Warteschlange leer sein."
+assert "T-101" in _stdout, "Gib die Reihenfolge mit print aus."
+`,
+        },
+        {
+          id: 'q4', level: 'Edge Case', title: 'Schichtbeginn',
+          scenario: 'Zu Schichtbeginn bearbeitet ein Mitarbeiter mehrere Tickets am Stück. Manchmal sind weniger Tickets da als geplant — oder gar keine.',
+          goal: 'Schreibe <code>bearbeite(warteschlange, anzahl)</code>. Sie entnimmt bis zu <code>anzahl</code> Tickets von <strong>vorn</strong> aus der Warteschlange und gibt sie als Liste in Bearbeitungsreihenfolge zurück. Ist die Schlange kürzer, werden nur die vorhandenen entnommen; bei <code>anzahl &lt;= 0</code> oder leerer Schlange ist das Ergebnis <code>[]</code>.',
+          hint: 'Ein <code>while</code> mit zwei Bedingungen: es ist noch etwas in der Schlange <em>und</em> du hast noch nicht genug bearbeitet. Ein pop(0) auf leerer Liste würde einen IndexError auslösen.',
+          starter: py`def bearbeite(warteschlange, anzahl):
+    pass
+`,
+          solution: py`def bearbeite(warteschlange, anzahl):
+    erledigt = []
+    while len(warteschlange) > 0 and len(erledigt) < anzahl:
+        erledigt.append(warteschlange.pop(0))
+    return erledigt
+`,
+          tests: py`
+q = ["T-1", "T-2", "T-3", "T-4"]
+assert bearbeite(q, 2) == ["T-1", "T-2"], "Die ersten zwei Tickets (vorn) sollen bearbeitet werden."
+assert q == ["T-3", "T-4"], "Bearbeitete Tickets müssen aus der Schlange verschwinden."
+assert bearbeite(q, 10) == ["T-3", "T-4"], "Gibt es weniger Tickets als angefordert, werden nur die vorhandenen entnommen."
+assert q == [], "Danach ist die Schlange leer."
+assert bearbeite(q, 3) == [], "Leere Schlange → leere Liste (kein IndexError)."
+r = ["T-9"]
+assert bearbeite(r, 0) == [] and r == ["T-9"], "anzahl 0 → nichts entnehmen."
+assert bearbeite(r, -2) == [] and r == ["T-9"], "Negative anzahl → nichts entnehmen."
+`,
+        },
+        {
+          id: 'q5', level: 'Algorithmus', title: 'Durchschnittliche Wartezeit',
+          scenario: 'Alle Tickets liegen um 9:00 Uhr bereit, der Support bearbeitet sie strikt nacheinander (FIFO). Jedes Ticket hat eine Bearbeitungsdauer in Minuten. Wie lange wartet ein Ticket im Schnitt, bis es drankommt?',
+          goal: 'Schreibe <code>durchschnittliche_wartezeit(dauern)</code>. <code>dauern</code> ist die Liste der Bearbeitungszeiten in Ankunftsreihenfolge. Die Wartezeit eines Tickets ist die Summe der Dauern aller Tickets <em>vor</em> ihm. Gib den Durchschnitt aller Wartezeiten zurück, auf 2 Nachkommastellen gerundet. Ohne Tickets ist das Ergebnis <code>0.0</code>. Verändere die übergebene Liste nicht.',
+          hint: 'Beispiel <code>[5, 3, 2]</code>: Wartezeiten 0, 5, 8 → Durchschnitt 4.33. Simuliere mit einem laufenden Zähler <code>uhr</code>: Wartezeit = aktueller Stand von <code>uhr</code>, danach <code>uhr += dauer</code>.',
+          starter: py`def durchschnittliche_wartezeit(dauern):
+    pass
+`,
+          solution: py`def durchschnittliche_wartezeit(dauern):
+    if len(dauern) == 0:
+        return 0.0
+    uhr = 0
+    gesamt_wartezeit = 0
+    for dauer in dauern:
+        gesamt_wartezeit += uhr
+        uhr += dauer
+    return round(gesamt_wartezeit / len(dauern), 2)
+`,
+          tests: py`
+assert durchschnittliche_wartezeit([5, 3, 2]) == 4.33, "Für [5, 3, 2] sind die Wartezeiten 0, 5 und 8."
+assert durchschnittliche_wartezeit([1, 1, 1, 1]) == 1.5, "Für [1, 1, 1, 1] sind die Wartezeiten 0, 1, 2, 3."
+assert durchschnittliche_wartezeit([10]) == 0.0, "Das erste Ticket wartet nie."
+assert durchschnittliche_wartezeit([]) == 0.0, "Ohne Tickets: 0.0."
+assert type(durchschnittliche_wartezeit([4, 4])) is float, "Das Ergebnis muss ein float sein."
+original = [2, 4, 6]
+assert durchschnittliche_wartezeit(original) == 2.67, "Für [2, 4, 6] sind die Wartezeiten 0, 2 und 6."
+assert original == [2, 4, 6], "Verändere die übergebene Liste nicht."
+`,
+        },
+      ],
+
+      sandbox: py`# Sandbox — Queue
+tickets = []
+
+tickets.append("T-101")
+tickets.append("T-102")
+tickets.append("T-103")
+print("Schlange:", tickets)
+
+dran = tickets.pop(0)
+print("Bearbeite:", dran)
+print("Wartend:", tickets)
+
+# Tipp: Für große Warteschlangen gibt es collections.deque
+from collections import deque
+q = deque(["A", "B", "C"])
+print(q.popleft(), q)
+`,
+    },
     soon(10, 'linkedlist',    'Linked List',                    'struktur',   '○→○'),
     soon(11, 'dict',          'Dictionary',                     'struktur',   '{:}'),
     soon(12, 'set',           'Set',                            'struktur',   '{∪}'),
