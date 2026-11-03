@@ -198,47 +198,66 @@ const Visuals = (() => {
    */
   function renderDashboard(root, data, handlers) {
     root.innerHTML = '';
-    const heroRing = ring({ size: 188, stroke: 12, pct: data.global, big: true });
+    const heroRing = ring({ size: 132, stroke: 9, pct: data.global, big: true });
     heroRing.el.append(h('span.ring-sub', I18n.t('dash.total')));
 
     const stat = (value, label) => h('div.stat', h('strong', value), h('span', label));
+    const fresh = data.stats.tasksDone + data.stats.scenesDone === 0;
+    const nextRow = data.next && data.topics.find((r) => r.topic === data.next);
+    const nextCard = nextRow && h('button.dash-next', { onclick: () => handlers.onOpen(data.next.id) },
+      h('span.tile-icon', data.next.icon),
+      h('span.dash-next-text',
+        h('small', fresh ? I18n.t('dash.startHere') : I18n.t('dash.nextUp')),
+        h('strong', I18n.topic(data.next).title),
+        h('small', I18n.t('dash.steps', { done: nextRow.done, total: nextRow.total }))),
+      h('span.dash-next-go', fresh ? I18n.t('dash.start') : I18n.t('dash.continue'), ' →'));
+
     const hero = h('section.dash-hero',
       h('div.dash-hero-ring', heroRing.el),
       h('div.dash-hero-text',
         h('p.eyebrow', I18n.t('dash.eyebrow')),
         h('h1', I18n.t('dash.title')),
-        h('p.muted', I18n.t('dash.intro', { a: data.available, b: data.topics.length })),
         h('div.stats',
           stat(`${data.stats.tasksDone}/${data.stats.tasksTotal}`, I18n.t('dash.tasks')),
           stat(`${data.stats.scenesDone}/${data.stats.scenesTotal}`, I18n.t('dash.scenes')),
           stat(`${data.stats.modulesDone}/${data.available}`, I18n.t('dash.modules')),
         ),
-        h('div.dash-actions',
-          data.next && h('button.btn.btn-primary', { onclick: () => handlers.onOpen(data.next.id) },
-            data.stats.tasksDone + data.stats.scenesDone === 0 ? I18n.t('dash.start') : I18n.t('dash.continue'),
-            h('span.btn-sub', I18n.topic(data.next).title)),
-          h('button.btn.btn-ghost', { onclick: handlers.onReset }, I18n.t('dash.reset')),
-        ),
+        nextCard,
       ),
     );
 
-    const grid = h('div.ring-grid');
-    data.topics.forEach(({ topic, pct, done, total }, i) => {
-      const soonTopic = topic.status === 'soon';
-      const rg = ring({ size: 76, stroke: 6, pct: soonTopic ? 0 : pct, dim: soonTopic });
-      const tile = h('button.tile' + (soonTopic ? '.tile-soon' : ''),
-        { style: { '--i': i }, onclick: () => handlers.onOpen(topic.id), title: I18n.topic(topic).title },
-        rg.el,
-        h('div.tile-text',
-          h('span.tile-icon', topic.icon),
-          h('strong', I18n.topic(topic).title),
-          h('small', soonTopic ? I18n.t('dash.soon') : I18n.t('dash.steps', { done, total })),
-        ),
-      );
-      grid.append(tile);
+    root.append(hero);
+
+    let i = 0;
+    CONTENT.groups.forEach((g) => {
+      const rows = data.topics.filter((r) => r.topic.group === g.id);
+      if (!rows.length) return;
+      const ready = rows.filter((r) => r.topic.status === 'ready');
+      const finished = ready.filter((r) => r.pct === 100).length;
+      const pct = Math.round(rows.reduce((n, r) => n + r.pct, 0) / rows.length);
+      const grid = h('div.ring-grid');
+      rows.forEach(({ topic, pct: tp, done, total }) => {
+        const soonTopic = topic.status === 'soon';
+        const rg = ring({ size: 76, stroke: 6, pct: soonTopic ? 0 : tp, dim: soonTopic });
+        grid.append(h('button.tile' + (soonTopic ? '.tile-soon' : ''),
+          { style: { '--i': i++ }, onclick: () => handlers.onOpen(topic.id), title: I18n.topic(topic).title },
+          rg.el,
+          h('div.tile-text',
+            h('span.tile-icon', topic.icon),
+            h('strong', I18n.topic(topic).title),
+            h('small', soonTopic ? I18n.t('dash.soon') : I18n.t('dash.steps', { done, total })),
+          ),
+        ));
+      });
+      root.append(h('section.dash-group',
+        h('header.group-head',
+          h('h2.section-title', I18n.group(g)),
+          h('span.group-meta', I18n.t('dash.groupDone', { a: finished, b: ready.length })),
+          h('div.group-bar', h('i', { style: { width: pct + '%' } }))),
+        grid));
     });
 
-    root.append(hero, h('h2.section-title', I18n.t('dash.all')), grid);
+    root.append(h('div.dash-foot', h('button.btn.btn-ghost', { onclick: handlers.onReset }, I18n.t('dash.reset'))));
   }
 
   /* ------------------------------------------------------------ 5. Effekte */

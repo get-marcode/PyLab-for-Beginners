@@ -7,7 +7,7 @@ Python läuft direkt im Browser (via [Pyodide](https://pyodide.org)), deine Lös
 
 ## Was drin steckt
 
-18 Module, vom ersten `print()` bis zu Graphen und Objektorientierung:
+17 Module, vom ersten `print()` bis zu Graphen und Objektorientierung:
 
 | Gruppe | Themen |
 |---|---|

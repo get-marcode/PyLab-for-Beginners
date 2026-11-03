@@ -105,6 +105,9 @@ const I18n = (() => {
       'dash.continue': 'Weiterlernen',
       'dash.reset': 'Fortschritt zurücksetzen',
       'dash.all': 'Alle Module',
+      'dash.startHere': 'Starte hier',
+      'dash.nextUp': 'Als Nächstes',
+      'dash.groupDone': '{a}/{b} fertig',
       'dash.steps': '{done}/{total} Schritte',
       'dash.soon': 'bald verfügbar',
 
@@ -476,6 +479,9 @@ const I18n = (() => {
       'dash.continue': 'Keep learning',
       'dash.reset': 'Reset progress',
       'dash.all': 'All modules',
+      'dash.startHere': 'Start here',
+      'dash.nextUp': 'Up next',
+      'dash.groupDone': '{a}/{b} done',
       'dash.steps': '{done}/{total} steps',
       'dash.soon': 'coming soon',
 
