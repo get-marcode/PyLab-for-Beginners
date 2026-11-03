@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#09090b">
+  <link rel="icon" type="image/png" href="assets/marcode-logo.png">
+  <script>
+    /* Theme und Sprache wie in der App übernehmen. */
+    try {
+      var t = localStorage.getItem('pylab.theme');
+      if (t === 'light') t = 'day';
+      var mode = { day: 1, sand: 1, nebel: 1, rose: 1, ocean: 0, forest: 0, dusk: 0 };
+      if (t in mode) {
+        document.documentElement.dataset.theme = t;
+        if (mode[t]) document.documentElement.dataset.mode = 'light';
+      }
+      if (localStorage.getItem('pylab.lang') === 'en') document.documentElement.lang = 'en';
+    } catch (e) {}
+  </script>
+  <title>PyLab — Datenschutz</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .legal { max-width: 760px; margin: 0 auto; padding: 40px clamp(20px, 4vw, 32px) 24px; }
+    .legal h1 { font-size: clamp(26px, 4vw, 36px); letter-spacing: -0.02em; margin: 14px 0 6px; }
+    .legal h2 { font-size: 18px; margin: 30px 0 8px; color: var(--strong); }
+    .legal p, .legal li { color: var(--ink-2); }
+    .legal p + p { margin-top: 10px; }
+    .legal ul { margin: 8px 0 0; padding-left: 22px; }
+    .legal a { color: var(--accent-soft); text-underline-offset: 3px; }
+    .legal .back { display: inline-block; font-size: 14px; }
+    .legal .stand { font-size: 13px; color: var(--muted); }
+    .legal [lang] { display: none; }
+    html[lang="de"] .legal [lang="de"], html[lang="en"] .legal [lang="en"] { display: block; }
+    html[lang="de"] .legal li[lang="de"], html[lang="en"] .legal li[lang="en"] { display: list-item; }
+    .legal .site-foot { margin-left: 0; padding: 40px 0 10px; }
+  </style>
+</head>
+<body>
+  <main class="legal">
+    <!-- Deutsch -->
+    <div lang="de">
+      <a class="back" href="index.html">← Zurück zu PyLab</a>
+      <h1>Datenschutzerklärung</h1>
+      <p class="stand">Stand: November 2026</p>
+
+      <h2>Kurzfassung</h2>
+      <p>PyLab setzt keine Cookies, enthält keine Analyse- oder Werbedienste und hat keine Benutzerkonten. Dein Python-Code läuft in deinem Browser und wird nicht an einen Server gesendet. Dein Lernfortschritt wird nur auf deinem Gerät gespeichert.</p>
+
+      <h2>Verantwortlicher</h2>
+      <p>Marcode (GitHub: <a href="https://github.com/get-marcode" rel="noopener">get-marcode</a>). Kontakt über GitHub, zum Beispiel per Issue im <a href="https://github.com/get-marcode/PyLab-for-Beginners/issues" rel="noopener">Projekt-Repository</a>.</p>
+
+      <h2>Hosting über GitHub Pages</h2>
+      <p>Diese Seite wird über GitHub Pages ausgeliefert (GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA). Beim Aufruf verarbeitet GitHub technisch notwendige Verbindungsdaten, insbesondere deine IP-Adresse, Datum und Uhrzeit sowie die aufgerufene Datei, um die Seite auszuliefern und zu schützen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (Interesse an einer sicheren und funktionierenden Bereitstellung). Dabei kann eine Übermittlung in die USA stattfinden. Weitere Hinweise findest du in der <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>
+
+      <h2>Python-Laufzeit (Pyodide über jsDelivr)</h2>
+      <p>Damit Python im Browser laufen kann, lädt PyLab die Laufzeitumgebung Pyodide beim ersten Start vom Content-Delivery-Netzwerk jsDelivr (<code>cdn.jsdelivr.net</code>). Dabei erhält der Anbieter technisch bedingt deine IP-Adresse und die üblichen Verbindungsdaten. Ohne diese Datei kann der Python-Teil nicht ausgeführt werden. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO. Die Schriften der Seite liegen dagegen lokal auf dem Server, dafür wird nichts von Google geladen.</p>
+
+      <h2>Lokale Speicherung im Browser</h2>
+      <p>PyLab speichert folgende Angaben ausschließlich im <code>localStorage</code> deines Browsers. Sie verlassen dein Gerät nicht:</p>
+      <ul>
+        <li>Lernfortschritt, gelöste Aufgaben und eigener Code in der Sandbox</li>
+        <li>gewählte Sprache und Farbthema</li>
+        <li>Einstellungen und Stand des Lerntimers</li>
+      </ul>
+      <p>Das dient allein dazu, die von dir gewünschten Funktionen bereitzustellen. Du kannst die Daten jederzeit löschen, über „Fortschritt zurücksetzen“ auf dem Dashboard oder über die Website-Daten deines Browsers. Es werden keine Cookies gesetzt, deshalb gibt es kein Cookie-Banner.</p>
+
+      <h2>Keine Weitergabe, kein Tracking</h2>
+      <p>Es gibt keine Analyse-Tools, keine Werbung, keine eingebetteten Inhalte von Dritten und keine Formulare. Code, den du in PyLab schreibst, wird nicht gesendet oder gespeichert, er wird lokal ausgeführt.</p>
+
+      <h2>Deine Rechte</h2>
+      <p>Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch nach den Art. 15 bis 21 DSGVO. Zudem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren. Da Marcode selbst keine personenbezogenen Daten speichert, betreffen Anfragen zu Server-Logs in der Regel GitHub.</p>
+    </div>
+
+    <!-- English -->
+    <div lang="en">
+      <a class="back" href="index.html">← Back to PyLab</a>
+      <h1>Privacy policy</h1>
+      <p class="stand">Last updated: November 2026</p>
+
+      <h2>In short</h2>
+      <p>PyLab sets no cookies, includes no analytics or advertising services and has no user accounts. Your Python code runs in your browser and is not sent to any server. Your learning progress is stored on your device only.</p>
+
+      <h2>Controller</h2>
+      <p>Marcode (GitHub: <a href="https://github.com/get-marcode" rel="noopener">get-marcode</a>). Contact via GitHub, for example through an issue in the <a href="https://github.com/get-marcode/PyLab-for-Beginners/issues" rel="noopener">project repository</a>.</p>
+
+      <h2>Hosting on GitHub Pages</h2>
+      <p>This site is served through GitHub Pages (GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA). When you open it, GitHub processes technically necessary connection data, in particular your IP address, date and time and the requested file, in order to deliver and protect the site. The legal basis is Art. 6(1)(f) GDPR (interest in a secure and working service). Data may be transferred to the USA. See <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">GitHub's privacy statement</a> for details.</p>
+
+      <h2>Python runtime (Pyodide via jsDelivr)</h2>
+      <p>To run Python in the browser, PyLab loads the Pyodide runtime on first start from the jsDelivr content delivery network (<code>cdn.jsdelivr.net</code>). As a technical necessity, the provider receives your IP address and the usual connection data. Without this file the Python part cannot run. The legal basis is Art. 6(1)(f) GDPR. The site's fonts, by contrast, are hosted locally, nothing is loaded from Google.</p>
+
+      <h2>Local storage in your browser</h2>
+      <p>PyLab saves the following only in your browser's <code>localStorage</code>. It never leaves your device:</p>
+      <ul>
+        <li>learning progress, solved tasks and your own code in the sandbox</li>
+        <li>chosen language and colour theme</li>
+        <li>learning timer settings and state</li>
+      </ul>
+      <p>This only serves to provide the features you asked for. You can delete the data at any time, with “Reset progress” on the dashboard or through your browser's site data. No cookies are set, so there is no cookie banner.</p>
+
+      <h2>No sharing, no tracking</h2>
+      <p>There are no analytics tools, no advertising, no embedded third-party content and no forms. Code you write in PyLab is not sent or stored, it runs locally.</p>
+
+      <h2>Your rights</h2>
+      <p>You have the right of access, rectification, erasure, restriction of processing, data portability and objection under Articles 15 to 21 GDPR, and you can lodge a complaint with a data protection authority. As Marcode stores no personal data itself, requests about server logs usually concern GitHub.</p>
+    </div>
+
+    <footer class="site-foot">
+      <a href="index.html">PyLab</a>
+    </footer>
+  </main>
+</body>
+</html>

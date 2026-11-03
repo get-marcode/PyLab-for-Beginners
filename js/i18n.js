@@ -28,7 +28,7 @@ const I18n = (() => {
   const STRINGS = {
     de: {
       'a11y.menu': 'Menü öffnen',
-      'foot.license': 'MIT-Lizenz', 'foot.source': 'Quellcode auf GitHub',
+      'foot.license': 'MIT-Lizenz', 'foot.source': 'Quellcode auf GitHub', 'foot.privacy': 'Datenschutz',
       'a11y.home': 'Zum Dashboard',
       'a11y.nav': 'Lehrplan',
       'a11y.progress': 'Gesamtfortschritt',
@@ -402,7 +402,7 @@ const I18n = (() => {
 
     en: {
       'a11y.menu': 'Open menu',
-      'foot.license': 'MIT licence', 'foot.source': 'Source code on GitHub',
+      'foot.license': 'MIT licence', 'foot.source': 'Source code on GitHub', 'foot.privacy': 'Privacy',
       'a11y.home': 'Go to dashboard',
       'a11y.nav': 'Curriculum',
       'a11y.progress': 'Overall progress',
