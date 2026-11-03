@@ -1,70 +1,72 @@
 # PyLab for Beginners
 
-Interaktiver Python-Trainer im Browser – ohne Installation, ohne Build, ohne Server.
-*An interactive, browser-based Python trainer for beginners (no install, no build step).*
+🇩🇪 [Deutsche Version](README.de.md)
 
-Python läuft direkt im Browser (via [Pyodide](https://pyodide.org)), deine Lösungen werden gegen versteckte Tests geprüft.
+An interactive Python trainer for the browser: no installation, no build step, no server needed.
 
-## Was drin steckt
+Python runs right in your browser (via [Pyodide](https://pyodide.org)), and your solutions are checked against hidden tests.
 
-17 Module, vom ersten `print()` bis zu Graphen und Objektorientierung:
+## What's inside
 
-| Gruppe | Themen |
+17 modules, from the first `print()` to graphs and object-oriented programming:
+
+| Group | Topics |
 |---|---|
-| Grundlagen | Variablen & Typen, Kontrollfluss, Funktionen & Scope, List Comprehensions |
-| Datenstrukturen | Listen, Tupel, Stack, Queue, verkettete Liste, Dictionary, Sets |
-| Algorithmen | Rekursion, Sortieren (Bubble / Merge) |
-| Bäume & Graphen | Binärer Suchbaum, Traversierungen, Graphen (BFS / DFS) |
-| OOP | Klassen, Objekte, Vererbung |
+| Basics | Variables & types, control flow, functions & scope, list comprehensions |
+| Data structures | Lists, tuples, stack, queue, linked list, dictionary, sets |
+| Algorithms | Recursion, sorting (bubble / merge) |
+| Trees & graphs | Binary search tree, traversals, graphs (BFS / DFS) |
+| OOP | Classes, objects, inheritance |
 
-Jedes Modul hat vier Modi:
+Every module has four modes:
 
-1. **Verstehen** – Erklärseite mit Analogie, Begriffen, lauffähigem Beispiel, typischen Stolpersteinen und Spickzettel
-2. **Entdecken** – animierte Szenen, in denen du Schritt für Schritt siehst, was im Speicher passiert
-3. **Trainieren** – 5 Aufgaben pro Modul mit Hinweisen und automatisch geprüften Lösungen
-4. **Sandbox** – freier Editor mit Konsole
+1. **Understand** – explainer page with an analogy, key terms, a runnable example, common pitfalls and a cheat sheet
+2. **Discover** – animated scenes that show step by step what happens in memory
+3. **Train** – 5 tasks per module with hints and automatically checked solutions
+4. **Sandbox** – a free editor with a console
 
-In der Sandbox lassen sich Eingaben für `input()` unter dem Editor eintragen (eine Zeile pro Aufruf).
+In the sandbox you can enter input for `input()` below the editor (one line per call).
 
-Dazu: 8 Farbthemen (4 dunkel, 4 hell), Lerntimer mit dezenten Pausenerinnerungen, Fortschrittsanzeige und Oberfläche auf Deutsch und Englisch.
+Also included: 8 colour themes (4 dark, 4 light), a learning timer with gentle break reminders, a progress dashboard and a user interface in German and English.
 
-## Starten
+## Getting started
 
-Es ist eine statische Seite. Wegen des Web Workers am besten über einen lokalen Server öffnen:
+It is a static site. Because of the web worker, it is best opened through a local server:
 
 ```bash
 cd PyLab-for-Beginners
 python3 -m http.server 8000
 ```
 
-Dann `http://localhost:8000` im Browser öffnen. Beim ersten Start lädt Pyodide einmalig aus dem Netz (ca. 10 MB), danach läuft der Python-Teil im Browser-Cache.
+Then open `http://localhost:8000` in your browser. On first start, Pyodide is downloaded once (about 10 MB); after that the Python part runs from the browser cache.
 
-## Projektstruktur
+## Project structure
 
 ```
-index.html        Einstieg, Kopfzeile, Menüs
-css/style.css     Design-Tokens, Themes, Layout, Szenen
-js/app.js         Router, Modi, Aufgaben-Runner, Themes, Menüs
-js/content.js     Themen, Aufgaben, Tests, Szenen-Konfiguration
-js/visuals.js     Animierte Szenen (Registry scenes.<name>)
-js/explain.js     Inhalte der Verstehen-Seiten (DE/EN)
-js/i18n.js        UI-Texte und Sprachauswahl
-js/meta-en.js     Englische Themenköpfe und Szenenbeschreibungen
-js/content-en.js  Englische Aufgaben und Szenentexte
-js/timer.js       Lerntimer und Pausenerinnerung
-assets/           Logo-Varianten, Schriften (assets/fonts, lokal eingebunden)
+index.html        Entry point, header, menus
+privacy.html      Privacy policy (German / English)
+css/style.css     Design tokens, themes, layout, scenes
+js/app.js         Router, modes, task runner, themes, menus
+js/content.js     Topics, tasks, tests, scene configuration
+js/visuals.js     Animated scenes (registry scenes.<name>)
+js/explain.js     Content of the Understand pages (DE/EN)
+js/i18n.js        UI texts and language selection
+js/meta-en.js     English topic headers and scene descriptions
+js/content-en.js  English tasks and scene texts
+js/timer.js       Learning timer and break reminder
+assets/           Logo variants, fonts (assets/fonts, included locally)
 ```
 
-Reine Klassik-Skripte, keine Abhängigkeiten außer Pyodide aus dem CDN (jsDelivr). Die Schriften liegen lokal im Projekt, es wird nichts von Google geladen.
+Plain classic scripts, no dependencies except Pyodide from a CDN (jsDelivr). The fonts are part of the project, nothing is loaded from Google.
 
-## Eigene Aufgaben ergänzen
+## Adding your own tasks
 
-Aufgaben stehen in `js/content.js` pro Thema: Startcode, Lösung, Hinweise und ein Python-Testblock mit `assert`-Anweisungen, der versteckt ausgeführt wird. Neue Szenen werden in `js/visuals.js` registriert.
+Tasks live in `js/content.js`, per topic: starter code, solution, hints and a Python test block of `assert` statements that is run hidden. New scenes are registered in `js/visuals.js`.
 
-## Sprachen
+## Languages
 
-Oberfläche, Erklärseiten, Aufgaben und Szenen gibt es auf Deutsch und Englisch. Die Sprache wählst du oben rechts. Deutsche Aufgaben stehen in `js/content.js`, die englische Fassung in `js/content-en.js`.
+The interface, explainer pages, tasks and scenes are available in German and English. You choose the language at the top right. German tasks are in `js/content.js`, the English version is in `js/content-en.js`.
 
-## Lizenz
+## License
 
-Der Code steht unter der [MIT-Lizenz](LICENSE). Die Schriften Space Grotesk und JetBrains Mono stehen unter der SIL Open Font License 1.1 (Texte in `assets/fonts/`). Python läuft über [Pyodide](https://pyodide.org) (MPL 2.0).
+The code is released under the [MIT License](LICENSE). The fonts Space Grotesk and JetBrains Mono are licensed under the SIL Open Font License 1.1 (texts in `assets/fonts/`). Python runs via [Pyodide](https://pyodide.org) (MPL 2.0).
