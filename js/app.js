@@ -15,11 +15,14 @@
   const { h } = Visuals;
   const TOPICS = CONTENT.topics;
   const byId = (id) => TOPICS.find((t) => t.id === Number(id));
+  const { t } = I18n;
   const MODES = [
-    { id: 'discover', key: 'A', label: 'Entdecken' },
-    { id: 'train',    key: 'B', label: 'Trainieren' },
-    { id: 'sandbox',  key: 'C', label: 'Sandbox' },
+    { id: 'learn',    key: '1' },
+    { id: 'discover', key: '2' },
+    { id: 'train',    key: '3' },
+    { id: 'sandbox',  key: '4' },
   ];
+  const modeLabel = (id) => t('mode.' + id);
   const RUN_TIMEOUT_MS = 8000;
 
   /* ================================================ 1. Python-Worker */
@@ -52,7 +55,7 @@
       const { id, code, tests } = data;
       const res = { type: 'result', id, ok: true, stdout: '', error: null, test: null };
       if (!(await booted)) {
-        postMessage({ ...res, ok: false, error: 'Python konnte nicht geladen werden (Internetverbindung?).' });
+        postMessage({ ...res, ok: false, error: '__LOAD__' });
         return;
       }
       const out = [];
@@ -104,6 +107,7 @@
         else if (data.type === 'fatal') { this.onStatus('error'); this.markReady(false); this.failAll(data.message); }
         else if (data.type === 'result') {
           const p = this.pending.get(data.id);
+          if (data.error === '__LOAD__') data.error = t('run.loadFail');
           if (p) { this.pending.delete(data.id); p(data); }
         }
       };
@@ -124,7 +128,7 @@
 
     async exec(code, tests) {
       if (!(await this.ready)) {
-        return { ok: false, stdout: '', error: 'Python konnte nicht geladen werden. Prüfe deine Internetverbindung und lade die Seite neu.', test: null };
+        return { ok: false, stdout: '', error: t('run.loadFail'), test: null };
       }
       const id = ++this.seq;
       return new Promise((resolve) => {
@@ -133,7 +137,7 @@
           this.worker.terminate();
           URL.revokeObjectURL(this.url);
           this.spawn(); // frischer Worker, Pyodide kommt aus dem Browser-Cache
-          resolve({ ok: false, stdout: '', error: `Zeitüberschreitung nach ${RUN_TIMEOUT_MS / 1000} s — läuft deine Schleife endlos? Prüfe, ob sich die Bedingung jemals ändert.`, test: null });
+          resolve({ ok: false, stdout: '', error: t('run.timeout', { s: RUN_TIMEOUT_MS / 1000 }), test: null });
         }, RUN_TIMEOUT_MS);
         this.pending.set(id, (r) => { clearTimeout(timer); resolve(r); });
         this.worker.postMessage({ id, code, tests });
@@ -216,17 +220,17 @@
     const output = run ? (run.error ? run.stdout ? `${run.stdout}\n${run.error}` : run.error : run.stdout) : '';
     const f2 = fence(output);
     return [
-      `# Python-Sandbox — ${topic.title}`,
+      `# ${t('md.title')} — ${I18n.topic(topic).title}`,
       '',
-      `_Exportiert am ${new Date().toLocaleDateString('de-DE')} aus PyLab_`,
+      `_${t('md.exported', { date: new Date().toLocaleDateString(I18n.lang === 'de' ? 'de-DE' : 'en-GB') })}_`,
       '',
-      '## Code',
+      `## ${t('md.code')}`,
       '',
       `${f1}python`, code.replace(/\s+$/, ''), f1,
       '',
-      '## Konsolenausgabe',
+      `## ${t('md.console')}`,
       '',
-      `${f2}text`, output || '(keine Ausgabe)', f2,
+      `${f2}text`, output || t('sandbox.noOutput'), f2,
       '',
     ].join('\n');
   }
@@ -245,31 +249,58 @@
   els.topRing.append(topRing.el);
 
   const runner = new PyRunner((state) => {
-    const label = { loading: 'Python lädt …', ready: 'Python bereit', error: 'Python offline' }[state];
+    const label = t('py.' + state);
     els.status.dataset.state = state;
     els.status.querySelector('span').textContent = label;
   });
 
-  /** Übersetzt typische Python-Fehlermeldungen in einen kurzen Anfänger-Hinweis. */
+  /** Typische Python-Fehlermeldungen → kurzer Anfänger-Hinweis: [Muster, Deutsch, Englisch]. */
   const ERROR_HINTS = [
-    [/takes \d+ positional arguments? but \d+ (?:was|were) given/, 'Fehlt in der Methode das <code>self</code>? Jede Methode in einer Klasse braucht es als ersten Parameter: <code>def info(self):</code>.'],
-    [/missing \d+ required positional arguments?/, 'Beim Aufruf fehlt mindestens ein Argument. Zähle die Parameter in <code>def …</code> und vergleiche sie mit dem Aufruf.'],
-    [/object has no attribute/, 'Dieses Attribut gibt es am Objekt nicht. Wurde es im <code>__init__</code> mit <code>self.name = …</code> angelegt — und mit <code>self.</code> davor?'],
-    [/name '(?:self|\w+)' is not defined/, 'Python kennt diesen Namen hier nicht. Tippfehler? In einer Methode erreichst du Attribute nur über <code>self.attribut</code>, nicht über den nackten Namen.'],
-    [/IndentationError|expected an indented block/, 'Nach einem Doppelpunkt (<code>:</code>) muss der Code eingerückt sein — vier Leerzeichen pro Ebene.'],
-    [/SyntaxError: (?:expected ':'|invalid syntax)/, 'Schau in der gemeldeten Zeile nach: fehlt ein Doppelpunkt, eine Klammer oder ein Anführungszeichen?'],
-    [/KeyError/, 'Dieser Schlüssel steht nicht im Dictionary. <code>d.get(schluessel)</code> liefert stattdessen <code>None</code>, statt abzustürzen.'],
-    [/IndexError/, 'Der Index liegt außerhalb der Liste. Gültig sind <code>0</code> bis <code>len(liste) - 1</code>; bei einer leeren Liste gibt es keinen Index.'],
-    [/RecursionError/, 'Die Funktion ruft sich endlos selbst auf. Fehlt der <strong>Basisfall</strong> (<code>if … : return</code>), oder nähert sich der Aufruf ihm nicht?'],
-    [/NoneType/, 'Irgendwo ist <code>None</code> herausgekommen. Fehlt in einer Funktion ein <code>return</code> — oder wurde ein leerer Fall nicht abgefangen?'],
-    [/ZeroDivisionError/, 'Teilen durch 0 geht nicht. Prüfe den Nenner mit <code>if nenner == 0:</code>, bevor du teilst.'],
-    [/list indices must be integers/, 'In eckigen Klammern einer Liste muss eine Zahl stehen. Ob ein Wert <em>enthalten</em> ist, fragst du mit <code>wert in liste</code>.'],
+    [/takes \d+ positional arguments? but \d+ (?:was|were) given/,
+      'Fehlt in der Methode das <code>self</code>? Jede Methode in einer Klasse braucht es als ersten Parameter: <code>def info(self):</code>.',
+      'Is <code>self</code> missing in the method? Every method in a class needs it as its first parameter: <code>def info(self):</code>.'],
+    [/missing \d+ required positional arguments?/,
+      'Beim Aufruf fehlt mindestens ein Argument. Zähle die Parameter in <code>def …</code> und vergleiche sie mit dem Aufruf.',
+      'The call is missing at least one argument. Count the parameters in <code>def …</code> and compare them with the call.'],
+    [/object has no attribute/,
+      'Dieses Attribut gibt es am Objekt nicht. Wurde es im <code>__init__</code> mit <code>self.name = …</code> angelegt — und mit <code>self.</code> davor?',
+      'The object has no such attribute. Was it created in <code>__init__</code> with <code>self.name = …</code> — including the <code>self.</code> in front?'],
+    [/name '(?:self|\w+)' is not defined/,
+      'Python kennt diesen Namen hier nicht. Tippfehler? In einer Methode erreichst du Attribute nur über <code>self.attribut</code>, nicht über den nackten Namen.',
+      'Python does not know this name here. A typo? Inside a method you reach attributes only via <code>self.attribute</code>, not via the bare name.'],
+    [/IndentationError|expected an indented block/,
+      'Nach einem Doppelpunkt (<code>:</code>) muss der Code eingerückt sein — vier Leerzeichen pro Ebene.',
+      'After a colon (<code>:</code>) the code must be indented — four spaces per level.'],
+    [/SyntaxError: (?:expected ':'|invalid syntax)/,
+      'Schau in der gemeldeten Zeile nach: fehlt ein Doppelpunkt, eine Klammer oder ein Anführungszeichen?',
+      'Look at the reported line: is a colon, a bracket or a quotation mark missing?'],
+    [/KeyError/,
+      'Dieser Schlüssel steht nicht im Dictionary. <code>d.get(schluessel)</code> liefert stattdessen <code>None</code>, statt abzustürzen.',
+      'This key is not in the dictionary. <code>d.get(key)</code> returns <code>None</code> instead of crashing.'],
+    [/IndexError/,
+      'Der Index liegt außerhalb der Liste. Gültig sind <code>0</code> bis <code>len(liste) - 1</code>; bei einer leeren Liste gibt es keinen Index.',
+      'The index is outside the list. Valid are <code>0</code> to <code>len(items) - 1</code>; an empty list has no index at all.'],
+    [/RecursionError/,
+      'Die Funktion ruft sich endlos selbst auf. Fehlt der <strong>Basisfall</strong> (<code>if … : return</code>), oder nähert sich der Aufruf ihm nicht?',
+      'The function keeps calling itself forever. Is the <strong>base case</strong> missing (<code>if … : return</code>), or does the call not get closer to it?'],
+    [/NoneType/,
+      'Irgendwo ist <code>None</code> herausgekommen. Fehlt in einer Funktion ein <code>return</code> — oder wurde ein leerer Fall nicht abgefangen?',
+      'Somewhere <code>None</code> came out. Is a <code>return</code> missing in a function — or was an empty case not handled?'],
+    [/ZeroDivisionError/,
+      'Teilen durch 0 geht nicht. Prüfe den Nenner mit <code>if nenner == 0:</code>, bevor du teilst.',
+      'Dividing by 0 is not possible. Check the denominator with <code>if denominator == 0:</code> before dividing.'],
+    [/list indices must be integers/,
+      'In eckigen Klammern einer Liste muss eine Zahl stehen. Ob ein Wert <em>enthalten</em> ist, fragst du mit <code>wert in liste</code>.',
+      'A list needs a number in square brackets. To ask whether a value is <em>contained</em>, use <code>value in items</code>.'],
   ];
   function explainError(text) {
     const hit = ERROR_HINTS.find(([re]) => re.test(text || ''));
-    return hit ? hit[1] : null;
+    return hit ? hit[I18n.lang === 'de' ? 1 : 2] : null;
   }
-  const hintBox = (text) => { const e = explainError(text); return e ? h('div.err-hint', { html: '<strong>💡 Tipp:</strong> ' + e }) : null; };
+  const hintBox = (text) => { const e = explainError(text); return e ? h('div.err-hint', { html: `<strong>${t('hint.tip')}</strong> ` + e }) : null; };
+
+  /** Hinweis, solange Szenen-/Aufgabentexte nur auf Deutsch vorliegen. */
+  const contentNotice = () => (I18n.lang === 'de' ? null : h('p.lang-note', t('notice.de-only')));
 
   function toast(text) {
     const t = h('div.toast', text);
@@ -285,27 +316,28 @@
       const items = TOPICS.filter((t) => t.group === g.id);
       if (!items.length) return;
       els.nav.append(h('div.nav-group',
-        h('div.nav-label', g.label),
+        h('div.nav-label', I18n.group(g)),
         items.map((t) => {
           const p = progressOf(t);
           const dot = t.status === 'ready' ? h('i.nav-dot' + (p.pct === 100 ? '.is-done' : p.pct > 0 ? '.is-part' : '')) : null;
           return h('button.nav-item' + (t.id === r.id ? '.is-active' : '') + (t.status === 'soon' ? '.is-soon' : ''),
             { onclick: () => go(t.id) },
             h('span.nav-ico', t.icon),
-            h('span.nav-text', t.title, t.subtitle && h('small', t.subtitle)),
+            h('span.nav-text', I18n.topic(t).title, I18n.topic(t).subtitle && h('small', I18n.topic(t).subtitle)),
             dot);
         })));
     });
     topRing.set(overview().global);
     const topic = byId(r.id);
     els.crumbs.innerHTML = topic && topic.status !== 'dashboard'
-      ? `${topic.id}. <b>${topic.title}</b>${r.mode ? ' · ' + MODES.find((m) => m.id === r.mode).label : ''}`
-      : '<b>Dashboard</b>';
+      ? `${topic.id}. <b>${I18n.topic(topic).title}</b>${r.mode ? ' · ' + modeLabel(r.mode) : ''}`
+      : `<b>${t('crumb.dashboard')}</b>`;
   }
 
   function go(id, mode) {
     const topic = byId(id);
-    location.hash = topic.status === 'dashboard' ? '#/dashboard' : `#/topic/${id}/${mode || 'discover'}`;
+    const first = topic.status === 'ready' && progressOf(topic).done === 0 && typeof EXPLAIN !== 'undefined' && EXPLAIN[id];
+    location.hash = topic.status === 'dashboard' ? '#/dashboard' : `#/topic/${id}/${mode || (first ? 'learn' : 'discover')}`;
     document.body.classList.remove('nav-open');
   }
 
@@ -316,10 +348,10 @@
     Visuals.renderDashboard(root, overview(), {
       onOpen: (id) => go(id),
       onReset() {
-        if (!confirm('Gesamten Lernfortschritt und gespeicherte Entwürfe löschen?')) return;
+        if (!confirm(t('confirm.reset'))) return;
         Store.reset();
         render();
-        toast('Fortschritt zurückgesetzt.');
+        toast(t('toast.reset'));
       },
     });
     return root;
@@ -329,28 +361,94 @@
 
   function viewTopic(topic, mode) {
     const root = h('div.view');
-    root.append(h('header.topic-head',
-      h('p.eyebrow', `Modul ${topic.id} · ${topic.scenario || 'In Arbeit'}`),
-      h('h1', topic.title, topic.subtitle && h('small', topic.subtitle)),
-      topic.lead && h('p.lead', { html: topic.lead }),
+    const info = I18n.topic(topic);
+    const main = h('div.topic-main');
+    main.append(h('header.topic-head',
+      h('p.eyebrow', t('topic.eyebrow', { id: topic.id, scenario: info.scenario || '' })),
+      h('h1', info.title, info.subtitle && h('small', info.subtitle)),
+      info.lead && h('p.lead', { html: info.lead }),
     ));
 
-    if (topic.status !== 'ready') {
-      root.append(h('div.soon-card',
-        h('h2', 'Dieses Modul ist noch in Arbeit'),
-        h('p.muted', 'Szenen, Aufgaben und Sandbox folgen. Starte so lange mit den fertigen Modulen.'),
-        h('div.mt', h('button.btn.btn-primary', { onclick: () => go(1) }, 'Zurück zum Dashboard'))));
-      return root;
-    }
-
-    root.append(h('nav.tabs', { role: 'tablist' }, MODES.map((m) =>
+    main.append(h('nav.tabs', { role: 'tablist' }, MODES.filter((m) => m.id !== 'learn' || hasExplain(topic)).map((m) =>
       h('button.tab' + (m.id === mode ? '.is-active' : ''), { role: 'tab', 'aria-selected': m.id === mode, onclick: () => go(topic.id, m.id) },
-        h('kbd', m.key), m.label))));
+        h('kbd', m.key), modeLabel(m.id)))));
 
     const pane = h('section.pane');
-    ({ discover: paneDiscover, train: paneTrain, sandbox: paneSandbox }[mode] || paneDiscover)(pane, topic);
-    root.append(pane);
+    const panes = { learn: paneLearn, discover: paneDiscover, train: paneTrain, sandbox: paneSandbox };
+    (panes[mode] || paneDiscover)(pane, topic);
+    main.append(pane);
+
+    root.append(h('div.topic-layout', main, sideRail(topic, mode)));
     return root;
+  }
+
+  /* ------------------------------------------------ Rechte Seitenleiste */
+
+  const explainOf = (topic) => {
+    const e = typeof EXPLAIN !== 'undefined' && EXPLAIN[topic.id];
+    return e ? e[I18n.lang] || e.de : null;
+  };
+  const hasExplain = (topic) => !!explainOf(topic);
+
+  /** Breite Bildschirme: Fortschritt, Inhaltsverzeichnis bzw. Spickzettel. */
+  function sideRail(topic, mode) {
+    const p = progressOf(topic);
+    const ex = explainOf(topic);
+    const cards = [];
+    const pr = Visuals.ring({ size: 58, stroke: 5, pct: p.pct });
+    cards.push(h('section.side-card',
+      h('div.side-title', t('rail.progress')),
+      h('div.side-progress', pr.el, h('span', t('rail.steps', { done: p.done, total: p.total })))));
+
+    if (mode === 'learn' && ex) {
+      const links = [['analogy', 'learn.analogy'], ['terms', 'learn.terms'], ['example', 'learn.example'], ['pitfalls', 'learn.pitfalls'], ['cheat', 'learn.cheat']];
+      cards.push(h('section.side-card',
+        h('div.side-title', t('rail.onPage')),
+        h('nav.side-links', links.map(([id, key]) => h('button', {
+          type: 'button',
+          onclick: () => { const el = document.getElementById('sec-' + id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
+        }, t(key))))));
+    } else {
+      cards.push(h('section.side-card',
+        h('div.side-title', t('rail.cheat')),
+        ex
+          ? h('dl.cheat', ex.cheat.map(([code, text]) => [h('dt', h('code', code)), h('dd', text)]))
+          : h('p.muted.small', t('rail.cheatEmpty')),
+        ex && h('button.btn.btn-ghost.side-btn', { type: 'button', onclick: () => go(topic.id, 'learn') }, t('rail.openLearn'))));
+    }
+    return h('aside.side-rail', { 'aria-label': t('rail.progress') }, cards);
+  }
+
+  /* ----------------------------------------------------- Modus 0: Verstehen */
+
+  function paneLearn(pane, topic) {
+    const ex = explainOf(topic);
+    if (!ex) { pane.append(h('p.muted', t('rail.cheatEmpty'))); return; }
+    const out = h('div.console.learn-out', { hidden: true });
+    const btnRun = h('button.btn.btn-primary', { type: 'button', onclick: async () => {
+      btnRun.disabled = true;
+      out.hidden = false;
+      out.replaceChildren(h('span.dim', t('train.running')));
+      const r = await runner.run(ex.example.code);
+      btnRun.disabled = false;
+      out.replaceChildren();
+      if (r.stdout) out.append(document.createTextNode(r.stdout));
+      if (r.error) out.append(h('div.err', r.error), hintBox(r.error));
+    } }, t('learn.tryIt'));
+    const sec = (id, title, ...kids) => h('section.learn-sec', { id: 'sec-' + id }, h('h2', title), kids);
+
+    pane.append(h('div.learn',
+      sec('analogy', t('learn.analogy'), h('p.analogy', { html: ex.analogy })),
+      sec('terms', t('learn.terms'), h('dl.terms', ex.terms.map(([term, text]) => [h('dt', term), h('dd', { html: text })]))),
+      sec('example', t('learn.example'),
+        h('pre.code-static', { html: Visuals.highlight(ex.example.code) }),
+        h('p.muted.small', { html: ex.example.note }),
+        h('div.btn-row', btnRun),
+        out),
+      sec('pitfalls', t('learn.pitfalls'), h('ul.pitfalls', ex.pitfalls.map((x) => h('li', { html: x })))),
+      sec('cheat', t('learn.cheat'), h('dl.cheat.cheat-wide', ex.cheat.map(([code, text]) => [h('dt', h('code', code)), h('dd', text)]))),
+      h('div.learn-next', h('button.btn.btn-primary', { type: 'button', onclick: () => go(topic.id, 'discover') }, t('learn.next'))),
+    ));
   }
 
   /* ----------------------------------------------------- Modus A: Entdecken */
@@ -360,12 +458,12 @@
     const done = () => Store.topic(topic.id).scenes;
     const pills = h('div.scene-tabs');
     const stage = h('div');
-    pane.append(pills, stage);
+    pane.append(contentNotice(), pills, stage);
 
     function paintPills() {
       pills.innerHTML = '';
       topic.scenes.forEach((s) => pills.append(h('button.pill' + (s.id === ui.scene[topic.id] ? '.is-active' : ''),
-        { onclick: () => show(s.id) }, h('i.tick' + (done().includes(s.id) ? '.is-done' : '')), s.title)));
+        { onclick: () => show(s.id) }, h('i.tick' + (done().includes(s.id) ? '.is-done' : '')), I18n.scene(topic, s).title)));
     }
 
     function show(id) {
@@ -373,7 +471,8 @@
       stage.innerHTML = '';
       const scene = topic.scenes.find((s) => s.id === id);
       const mount = h('div.scene');
-      stage.append(h('div.scene-head', h('h2', scene.title), h('p', scene.blurb)), mount);
+      const sceneText = I18n.scene(topic, scene);
+      stage.append(h('div.scene-head', h('h2', sceneText.title), h('p', sceneText.blurb)), mount);
       const instance = Visuals.renderScene(scene.visual, mount, scene.config, {
         touch() {
           if (Store.markScene(topic.id, scene.id)) { paintPills(); refreshChrome(); }
@@ -393,7 +492,7 @@
     const rail = h('div.rail');
     const bench = h('div.bench');
     wrap.append(rail, bench);
-    pane.append(wrap);
+    pane.append(contentNotice(), wrap);
 
     const current = () => ui.task[topic.id] ?? Math.max(0, topic.tasks.findIndex((t) => !solved().includes(t.id)));
 
@@ -403,7 +502,7 @@
         h('button.rail-item' + (i === current() ? '.is-active' : '') + (solved().includes(t.id) ? '.is-done' : ''),
           { onclick: () => { ui.task[topic.id] = i; paintRail(); paintBench(); } },
           h('span.rail-num', i + 1),
-          h('div', h('small', t.level), h('span.t', t.title)))));
+          h('div', h('small', I18n.level(t.level)), h('span.t', t.title)))));
     }
 
     function paintBench() {
@@ -413,7 +512,7 @@
       ui.fails[draftKey] ||= 0;
       bench.innerHTML = '';
 
-      const hint = h('div.hint', { html: '<strong>Hinweis:</strong> ' + task.hint });
+      const hint = h('div.hint', { html: `<strong>${t('train.hintLabel')}</strong> ` + task.hint });
       const hintSlot = h('div');
       const feedback = h('div');
       const consoleEl = h('div.console');
@@ -424,23 +523,23 @@
         onChange: (v) => Store.setDraft(draftKey, v),
       });
 
-      const btnCheck = h('button.btn.btn-primary', { onclick: () => check() }, '▶ Ausführen & prüfen');
-      const btnRun = h('button.btn.btn-ghost', { onclick: () => execute(false) }, 'Nur ausführen');
-      const btnHint = h('button.btn.btn-ghost', { onclick: () => hintSlot.replaceChildren(hint) }, 'Hinweis');
+      const btnCheck = h('button.btn.btn-primary', { onclick: () => check() }, t('train.check'));
+      const btnRun = h('button.btn.btn-ghost', { onclick: () => execute(false) }, t('train.run'));
+      const btnHint = h('button.btn.btn-ghost', { onclick: () => hintSlot.replaceChildren(hint) }, t('train.hint'));
       const btnReset = h('button.btn.btn-ghost', {
         onclick: () => { editor.setValue(task.starter); Store.setDraft(draftKey, task.starter); feedback.replaceChildren(); consoleEl.replaceChildren(); },
-      }, 'Zurücksetzen');
+      }, t('train.reset'));
       const btnSolution = h('button.btn.btn-ghost', {
         onclick: () => {
           editor.setValue(task.solution);
           Store.setDraft(draftKey, task.solution);
-          feedback.replaceChildren(h('div.banner.info', 'Musterlösung eingefügt. Lies sie in Ruhe durch und führe sie aus.'));
+          feedback.replaceChildren(h('div.banner.info', t('train.solutionShown')));
         },
-      }, 'Lösung zeigen');
+      }, t('train.solution'));
       const syncSolutionBtn = () => {
         const left = 3 - ui.fails[draftKey];
         btnSolution.disabled = left > 0 && !solved().includes(task.id);
-        btnSolution.title = btnSolution.disabled ? `Noch ${left} Fehlversuch(e) bis die Lösung freigeschaltet ist` : '';
+        btnSolution.title = btnSolution.disabled ? t('train.solutionLocked', { n: left }) : '';
       };
       syncSolutionBtn();
 
@@ -454,7 +553,7 @@
 
       async function execute(withTests) {
         setBusy(true);
-        feedback.replaceChildren(h('div.banner.info', withTests ? 'Prüfe …' : 'Läuft …'));
+        feedback.replaceChildren(h('div.banner.info', withTests ? t('train.checking') : t('train.running')));
         const r = await runner.run(editor.getValue(), withTests ? task.tests : null);
         setBusy(false);
         printResult(r);
@@ -467,7 +566,7 @@
         if (!r.ok) {
           ui.fails[draftKey]++;
           syncSolutionBtn();
-          feedback.replaceChildren(h('div.banner.bad', 'Dein Code hat einen Fehler — lies die Meldung in der Konsole von unten nach oben.'));
+          feedback.replaceChildren(h('div.banner.bad', t('train.codeError')));
           return;
         }
         if (r.test && r.test.passed) {
@@ -477,8 +576,8 @@
           Visuals.burst(btnCheck);
           const last = idx === topic.tasks.length - 1;
           feedback.replaceChildren(h('div.banner.ok',
-            h('div', '✓ Alle verdeckten Tests bestanden.'),
-            !last && h('div.mt', h('button.btn.btn-primary', { onclick: () => { ui.task[topic.id] = idx + 1; paintRail(); paintBench(); } }, 'Nächste Aufgabe →'))));
+            h('div', t('train.passed')),
+            !last && h('div.mt', h('button.btn.btn-primary', { onclick: () => { ui.task[topic.id] = idx + 1; paintRail(); paintBench(); } }, t('train.next')))));
           syncSolutionBtn();
           return;
         }
@@ -486,20 +585,20 @@
         syncSolutionBtn();
         const msg = (r.test && r.test.message) || '';
         const text = msg.startsWith('AssertionError: ') ? msg.slice(16)
-          : msg === 'AssertionError' ? 'Ein Testfall schlägt fehl — prüfe auch die Randfälle.'
-          : msg ? `Beim Prüfen ist ein Fehler aufgetreten: ${msg}` : 'Der Test ist fehlgeschlagen.';
+          : msg === 'AssertionError' ? t('train.edge')
+          : msg ? t('train.testError', { msg }) : t('train.failed');
         feedback.replaceChildren(h('div.banner.bad', '✗ ' + text), hintBox(msg));
       }
 
       bench.append(
         h('article.brief',
           h('div.brief-top',
-            h('span.level-tag', `${idx + 1}/${topic.tasks.length} · ${task.level}`),
+            h('span.level-tag', `${idx + 1}/${topic.tasks.length} · ${I18n.level(task.level)}`),
             h('div.level-dots', CONTENT.levels.map((_, i) => h('i' + (i <= idx ? '.on' : '')))),
           ),
           h('h2', task.title),
-          h('p.story', task.scenario),
-          h('span.goal-label', 'Aufgabe'),
+          h('p.story', { html: task.scenario }),
+          h('span.goal-label', t('train.goal')),
           h('p', { html: task.goal }),
           hintSlot,
         ),
@@ -531,33 +630,33 @@
     async function run() {
       const code = editor.getValue();
       btnRun.disabled = true;
-      consoleEl.replaceChildren(h('span.dim', 'Läuft …'));
+      consoleEl.replaceChildren(h('span.dim', t('train.running')));
       lastRun = await runner.run(code);
       lastCode = code;
       btnRun.disabled = false;
       consoleEl.replaceChildren();
       if (lastRun.stdout) consoleEl.append(document.createTextNode(lastRun.stdout));
       if (lastRun.error) consoleEl.append(h('div.err', lastRun.error), hintBox(lastRun.error));
-      if (!lastRun.stdout && !lastRun.error) consoleEl.append(h('span.dim', '(keine Ausgabe)'));
+      if (!lastRun.stdout && !lastRun.error) consoleEl.append(h('span.dim', t('sandbox.noOutput')));
       if (!lastRun.error && Store.markSandbox(topic.id)) refreshChrome();
       return lastRun;
     }
 
-    const btnRun = h('button.btn.btn-primary', { onclick: run }, '▶ Ausführen');
+    const btnRun = h('button.btn.btn-primary', { onclick: run }, t('sandbox.run'));
     const btnPy = h('button.btn.btn-ghost', {
       onclick: () => download(`${topic.slug}-sandbox.py`, editor.getValue(), 'text/x-python'),
-    }, 'Als .py speichern');
+    }, t('sandbox.py'));
     const btnMd = h('button.btn.btn-ghost', {
       async onclick() {
         if (lastCode !== editor.getValue()) await run();
         download(`${topic.slug}-sandbox.md`, buildMarkdown(topic, editor.getValue(), lastRun), 'text/markdown');
       },
-    }, 'Als .md exportieren');
+    }, t('sandbox.md'));
     const btnReset = h('button.btn.btn-ghost', {
       onclick: () => { editor.setValue(topic.sandbox); Store.setSandboxCode(topic.id, topic.sandbox); },
-    }, 'Zurücksetzen');
+    }, t('train.reset'));
 
-    pane.append(h('div.sandbox',
+    pane.append(contentNotice(), h('div.sandbox',
       h('div.sandbox-bar', btnRun, btnPy, btnMd, h('span.spacer'), btnReset,
         h('span.kbd-hint', h('kbd', '⌘'), ' / ', h('kbd', 'Strg'), ' + ', h('kbd', '↵'))),
       editor.el,
@@ -582,18 +681,93 @@
     window.scrollTo({ top: 0 });
   }
 
-  /* ----------------------------------------------------------- Theme */
-  const themeBtn = document.getElementById('themeBtn');
-  function applyTheme(t) {
-    document.documentElement.dataset.theme = t;
-    themeBtn.setAttribute('aria-label', t === 'light' ? 'Zum dunklen Modus wechseln' : 'Zum hellen Modus wechseln');
-    document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#f3f4f8' : '#09090b');
+  /* ------------------------------------------------- Popover-Menüs (Theme, Sprache) */
+  function popMenu(btn, menu) {
+    const toggle = (open) => {
+      menu.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) (menu.querySelector('[aria-checked="true"]') || menu.querySelector('.theme-opt')).focus();
+    };
+    btn.addEventListener('click', () => toggle(menu.hidden));
+    document.addEventListener('click', (e) => { if (!menu.hidden && !menu.parentElement.contains(e.target)) toggle(false); });
+    document.addEventListener('keydown', (e) => {
+      if (menu.hidden) return;
+      if (e.key === 'Escape') { toggle(false); btn.focus(); }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const opts = [...menu.querySelectorAll('.theme-opt')];
+        const i = opts.indexOf(document.activeElement);
+        opts[(i + (e.key === 'ArrowDown' ? 1 : opts.length - 1)) % opts.length].focus();
+      }
+    });
+    return toggle;
   }
-  applyTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark');
-  themeBtn.addEventListener('click', () => {
-    const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
-    applyTheme(next);
-    try { localStorage.setItem('pylab.theme', next); } catch (e) { /* privater Modus: Wahl gilt nur bis zum Neuladen */ }
+
+  /* ----------------------------------------------------------- Theme */
+  const THEMES = [
+    { id: 'space', mode: 'dark', bg: '#09090b', accent: '#ff5d00' },
+    { id: 'ocean', mode: 'dark', bg: '#060f1a', accent: '#27b4f5' },
+    { id: 'forest', mode: 'dark', bg: '#07110c', accent: '#8bd450' },
+    { id: 'dusk', mode: 'dark', bg: '#0d0a18', accent: '#b57cff' },
+    { id: 'day', mode: 'light', bg: '#f3f4f8', accent: '#c64200' },
+    { id: 'sand', mode: 'light', bg: '#f4efe4', accent: '#0f766e' },
+    { id: 'nebel', mode: 'light', bg: '#eceff6', accent: '#4338ca' },
+    { id: 'rose', mode: 'light', bg: '#f6eff1', accent: '#be185d' },
+  ];
+  const themeBtn = document.getElementById('themeBtn');
+  const themeMenu = document.getElementById('themeMenu');
+  let theme = THEMES.some((x) => x.id === document.documentElement.dataset.theme) ? document.documentElement.dataset.theme : 'space';
+
+  function applyTheme(id) {
+    theme = id;
+    const th = THEMES.find((x) => x.id === id);
+    if (id === 'space') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme = id;
+    if (th.mode === 'light') document.documentElement.dataset.mode = 'light';
+    else document.documentElement.removeAttribute('data-mode');
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', th.bg);
+    themeMenu.querySelectorAll('.theme-opt').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.id === id)));
+    try { localStorage.setItem('pylab.theme', id); } catch (e) { /* privater Modus: gilt nur bis zum Neuladen */ }
+  }
+  const toggleThemeMenu = popMenu(themeBtn, themeMenu);
+  const themeOpt = (th) => h('button.theme-opt', {
+    role: 'menuitemradio', 'data-id': th.id, 'aria-checked': 'false',
+    onclick: () => { applyTheme(th.id); toggleThemeMenu(false); themeBtn.focus(); },
+  }, h('span.swatch', { style: `--sw-bg:${th.bg};--sw-ac:${th.accent}` }), t('theme.' + th.id), h('span.tick', '✓'));
+  themeMenu.append(
+    h('div.menu-label', t('theme.dark')), ...THEMES.filter((x) => x.mode === 'dark').map(themeOpt),
+    h('div.menu-label', t('theme.light')), ...THEMES.filter((x) => x.mode === 'light').map(themeOpt),
+  );
+  themeBtn.title = t('theme.title');
+  themeBtn.setAttribute('aria-label', t('theme.title'));
+  themeMenu.setAttribute('aria-label', t('theme.menu'));
+  applyTheme(theme);
+
+  /* ----------------------------------------------------------- Sprache */
+  const langBtn = document.getElementById('langBtn');
+  const langMenu = document.getElementById('langMenu');
+  const toggleLangMenu = popMenu(langBtn, langMenu);
+  langBtn.querySelector('span').textContent = I18n.lang.toUpperCase();
+  langBtn.title = t('lang.title');
+  langBtn.setAttribute('aria-label', t('lang.title'));
+  langMenu.setAttribute('aria-label', t('lang.menu'));
+  langMenu.append(h('div.menu-label', t('lang.menu')), ...I18n.LANGS.map((l) => h('button.theme-opt', {
+    role: 'menuitemradio', 'data-id': l.id, 'aria-checked': String(l.id === I18n.lang),
+    onclick: () => { toggleLangMenu(false); if (l.id !== I18n.lang) I18n.set(l.id); },
+  }, h('span.lang-chip', l.short), l.label, h('span.tick', '✓'))));
+
+  /* Statische Texte aus index.html übersetzen */
+  document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-aria]').forEach((el) => el.setAttribute('aria-label', t(el.dataset.i18nAria)));
+  document.querySelectorAll('[data-i18n-title]').forEach((el) => el.setAttribute('title', t(el.dataset.i18nTitle)));
+
+  /* Tastatur: 1–4 wechseln den Modus (nicht beim Tippen im Editor) */
+  document.addEventListener('keydown', (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    const m = MODES.find((x) => x.key === e.key);
+    const r = parseRoute();
+    const topic = byId(r.id);
+    if (m && topic.status === 'ready' && (m.id !== 'learn' || hasExplain(topic))) go(topic.id, m.id);
   });
 
   /* ----------------------------------------------------------- Boot */

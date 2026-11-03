@@ -199,25 +199,25 @@ const Visuals = (() => {
   function renderDashboard(root, data, handlers) {
     root.innerHTML = '';
     const heroRing = ring({ size: 188, stroke: 12, pct: data.global, big: true });
-    heroRing.el.append(h('span.ring-sub', 'gesamt'));
+    heroRing.el.append(h('span.ring-sub', I18n.t('dash.total')));
 
     const stat = (value, label) => h('div.stat', h('strong', value), h('span', label));
     const hero = h('section.dash-hero',
       h('div.dash-hero-ring', heroRing.el),
       h('div.dash-hero-text',
-        h('p.eyebrow', 'Lernfortschritt'),
-        h('h1', 'Dein Weg durch Python'),
-        h('p.muted', `${data.available} von ${data.topics.length} Modulen sind spielbar. Jede entdeckte Szene, jede gelöste Aufgabe und jede Sandbox-Session füllt die Ringe.`),
+        h('p.eyebrow', I18n.t('dash.eyebrow')),
+        h('h1', I18n.t('dash.title')),
+        h('p.muted', I18n.t('dash.intro', { a: data.available, b: data.topics.length })),
         h('div.stats',
-          stat(`${data.stats.tasksDone}/${data.stats.tasksTotal}`, 'Aufgaben gelöst'),
-          stat(`${data.stats.scenesDone}/${data.stats.scenesTotal}`, 'Szenen entdeckt'),
-          stat(`${data.stats.modulesDone}/${data.available}`, 'Module fertig'),
+          stat(`${data.stats.tasksDone}/${data.stats.tasksTotal}`, I18n.t('dash.tasks')),
+          stat(`${data.stats.scenesDone}/${data.stats.scenesTotal}`, I18n.t('dash.scenes')),
+          stat(`${data.stats.modulesDone}/${data.available}`, I18n.t('dash.modules')),
         ),
         h('div.dash-actions',
           data.next && h('button.btn.btn-primary', { onclick: () => handlers.onOpen(data.next.id) },
-            data.stats.tasksDone + data.stats.scenesDone === 0 ? 'Jetzt starten' : 'Weiterlernen',
-            h('span.btn-sub', data.next.title)),
-          h('button.btn.btn-ghost', { onclick: handlers.onReset }, 'Fortschritt zurücksetzen'),
+            data.stats.tasksDone + data.stats.scenesDone === 0 ? I18n.t('dash.start') : I18n.t('dash.continue'),
+            h('span.btn-sub', I18n.topic(data.next).title)),
+          h('button.btn.btn-ghost', { onclick: handlers.onReset }, I18n.t('dash.reset')),
         ),
       ),
     );
@@ -227,18 +227,18 @@ const Visuals = (() => {
       const soonTopic = topic.status === 'soon';
       const rg = ring({ size: 76, stroke: 6, pct: soonTopic ? 0 : pct, dim: soonTopic });
       const tile = h('button.tile' + (soonTopic ? '.tile-soon' : ''),
-        { style: { '--i': i }, onclick: () => handlers.onOpen(topic.id), title: topic.title },
+        { style: { '--i': i }, onclick: () => handlers.onOpen(topic.id), title: I18n.topic(topic).title },
         rg.el,
         h('div.tile-text',
           h('span.tile-icon', topic.icon),
-          h('strong', topic.title),
-          h('small', soonTopic ? 'bald verfügbar' : `${done}/${total} Schritte`),
+          h('strong', I18n.topic(topic).title),
+          h('small', soonTopic ? I18n.t('dash.soon') : I18n.t('dash.steps', { done, total })),
         ),
       );
       grid.append(tile);
     });
 
-    root.append(hero, h('h2.section-title', 'Alle Module'), grid);
+    root.append(hero, h('h2.section-title', I18n.t('dash.all')), grid);
   }
 
   /* ------------------------------------------------------------ 5. Effekte */
@@ -272,9 +272,9 @@ const Visuals = (() => {
     let timer = null;
     let index = 0;
     const bar = h('i');
-    const btnStep = h('button.btn.btn-primary', { onclick: () => step(true) }, '▶ Schritt');
-    const btnAuto = h('button.btn.btn-ghost', { onclick: toggleAuto }, 'Auto-Play');
-    const btnReset = h('button.btn.btn-ghost', { onclick: reset }, '↺ Neu');
+    const btnStep = h('button.btn.btn-primary', { onclick: () => step(true) }, I18n.t('ctl.step'));
+    const btnAuto = h('button.btn.btn-ghost', { onclick: toggleAuto }, I18n.t('ctl.auto'));
+    const btnReset = h('button.btn.btn-ghost', { onclick: reset }, I18n.t('ctl.reset'));
     const el = h('div.controls', btnStep, btnAuto, btnReset, h('div.progress', bar));
 
     function paint() {
@@ -291,7 +291,7 @@ const Visuals = (() => {
     function toggleAuto() {
       if (timer) return stopAuto();
       if (index >= total) reset();
-      btnAuto.textContent = 'Pause';
+      btnAuto.textContent = I18n.t('ctl.pause');
       btnAuto.classList.add('is-on');
       timer = setInterval(() => step(false), interval);
       step(false);
@@ -299,7 +299,7 @@ const Visuals = (() => {
     function stopAuto() {
       clearInterval(timer);
       timer = null;
-      btnAuto.textContent = 'Auto-Play';
+      btnAuto.textContent = I18n.t('ctl.auto');
       btnAuto.classList.remove('is-on');
     }
     function reset() {
