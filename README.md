@@ -24,6 +24,8 @@ Jedes Modul hat vier Modi:
 3. **Trainieren** – 5 Aufgaben pro Modul mit Hinweisen und automatisch geprüften Lösungen
 4. **Sandbox** – freier Editor mit Konsole
 
+In der Sandbox lassen sich Eingaben für `input()` unter dem Editor eintragen (eine Zeile pro Aufruf).
+
 Dazu: 8 Farbthemen (4 dunkel, 4 hell), Lerntimer mit dezenten Pausenerinnerungen, Fortschrittsanzeige und Oberfläche auf Deutsch und Englisch.
 
 ## Starten
@@ -48,16 +50,21 @@ js/visuals.js     Animierte Szenen (Registry scenes.<name>)
 js/explain.js     Inhalte der Verstehen-Seiten (DE/EN)
 js/i18n.js        UI-Texte und Sprachauswahl
 js/meta-en.js     Englische Themenköpfe und Szenenbeschreibungen
+js/content-en.js  Englische Aufgaben und Szenentexte
 js/timer.js       Lerntimer und Pausenerinnerung
-assets/           Logo-Varianten
+assets/           Logo-Varianten, Schriften (assets/fonts, lokal eingebunden)
 ```
 
-Reine Klassik-Skripte, keine Abhängigkeiten außer Pyodide aus dem CDN.
+Reine Klassik-Skripte, keine Abhängigkeiten außer Pyodide aus dem CDN (jsDelivr). Die Schriften liegen lokal im Projekt, es wird nichts von Google geladen.
 
 ## Eigene Aufgaben ergänzen
 
 Aufgaben stehen in `js/content.js` pro Thema: Startcode, Lösung, Hinweise und ein Python-Testblock mit `assert`-Anweisungen, der versteckt ausgeführt wird. Neue Szenen werden in `js/visuals.js` registriert.
 
-## Hinweis zur Sprache
+## Sprachen
 
-Oberfläche und Erklärseiten gibt es auf Deutsch und Englisch; Aufgaben und Szenentexte werden gerade ins Englische übertragen.
+Oberfläche, Erklärseiten, Aufgaben und Szenen gibt es auf Deutsch und Englisch. Die Sprache wählst du oben rechts. Deutsche Aufgaben stehen in `js/content.js`, die englische Fassung in `js/content-en.js`.
+
+## Lizenz
+
+Der Code steht unter der [MIT-Lizenz](LICENSE). Die Schriften Space Grotesk und JetBrains Mono stehen unter der SIL Open Font License 1.1 (Texte in `assets/fonts/`). Python läuft über [Pyodide](https://pyodide.org) (MPL 2.0).

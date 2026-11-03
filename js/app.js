@@ -48,11 +48,11 @@
     const clean = (msg) => {
       const lines = String(msg).split('\n');
       const i = lines.findIndex((l) => l.includes('File "<exec>"'));
-      return (i >= 0 ? lines.slice(i) : lines.slice(-3)).join('\n').replace(/"<exec>"/g, '"main.py"').trim();
+      return (i >= 0 ? lines.slice(i) : lines.slice(-3)).filter((l) => !l.includes('_pylab_input')).join('\n').replace(/"<exec>"/g, '"main.py"').trim();
     };
 
     self.onmessage = async ({ data }) => {
-      const { id, code, tests } = data;
+      const { id, code, tests, inputs, noInput } = data;
       const res = { type: 'result', id, ok: true, stdout: '', error: null, test: null };
       if (!(await booted)) {
         postMessage({ ...res, ok: false, error: '__LOAD__' });
@@ -63,6 +63,24 @@
       py.setStderr({ batched: (s) => out.push(s) });
       const ns = py.globals.get('dict')();
       ns.set('__name__', '__main__');
+      // input() liest aus der vorgegebenen Liste statt von einer Tastatur (gibt es im Worker nicht)
+      const setup = py.globals.get('dict')();
+      setup.set('_pylab_inputs', JSON.stringify(inputs || []));
+      setup.set('_pylab_noinput', noInput || 'no input');
+      py.runPython(`
+import builtins, json, sys
+_q = json.loads(_pylab_inputs)
+def _pylab_input(prompt=""):
+    sys.stdout.write(str(prompt))
+    if not _q:
+        sys.stdout.write("\\n")
+        raise EOFError(_pylab_noinput)
+    v = _q.pop(0)
+    sys.stdout.write(v + "\\n")
+    return v
+builtins.input = _pylab_input
+`, { globals: setup });
+      setup.destroy();
       try {
         await py.runPythonAsync(code, { globals: ns });
       } catch (e) {
@@ -119,14 +137,14 @@
       this.pending.clear();
     }
 
-    /** Code ausführen (optional mit verdeckten Tests). Aufrufe laufen nacheinander. */
-    run(code, tests = null) {
-      const job = this.chain.then(() => this.exec(code, tests));
+    /** Code ausführen (optional mit verdeckten Tests und Eingaben für input()). Aufrufe laufen nacheinander. */
+    run(code, tests = null, inputs = null) {
+      const job = this.chain.then(() => this.exec(code, tests, inputs));
       this.chain = job.catch(() => {});
       return job;
     }
 
-    async exec(code, tests) {
+    async exec(code, tests, inputs) {
       if (!(await this.ready)) {
         return { ok: false, stdout: '', error: t('run.loadFail'), test: null };
       }
@@ -140,7 +158,7 @@
           resolve({ ok: false, stdout: '', error: t('run.timeout', { s: RUN_TIMEOUT_MS / 1000 }), test: null });
         }, RUN_TIMEOUT_MS);
         this.pending.set(id, (r) => { clearTimeout(timer); resolve(r); });
-        this.worker.postMessage({ id, code, tests });
+        this.worker.postMessage({ id, code, tests, inputs, noInput: t('sandbox.noInput') });
       });
     }
   }
@@ -163,6 +181,8 @@
       draft: (key) => state.drafts[key],
       setDraft(key, v) { state.drafts[key] = v; save(); },
       sandboxCode: (id) => state.sandbox[id],
+      sandboxInput: (id) => (state.sandboxIn || {})[id] || '',
+      setSandboxInput(id, v) { (state.sandboxIn ||= {})[id] = v; save(); },
       setSandboxCode(id, v) { state.sandbox[id] = v; save(); },
       reset() { state = { topics: {}, drafts: {}, sandbox: {} }; save(); },
     };
@@ -256,9 +276,9 @@
 
   /** Typische Python-Fehlermeldungen → kurzer Anfänger-Hinweis: [Muster, Deutsch, Englisch]. */
   const ERROR_HINTS = [
-    [/Errno 29|I\/O error/,
-      '<code>input()</code> gibt es in diesem Trainer nicht — hier kann nichts getippt werden. Lege den Wert direkt fest, zum Beispiel <code>name = "Mia"</code>.',
-      '<code>input()</code> is not available in this trainer — there is nowhere to type. Set the value directly instead, for example <code>name = "Mia"</code>.'],
+    [/EOFError|Errno 29/,
+      '<code>input()</code> wartet auf eine Eingabe, aber es ist keine vorhanden. In der Sandbox trägst du sie unter dem Editor ein (eine Zeile pro <code>input()</code>). Bei den Aufgaben gibt es keine Eingabe — lege den Wert direkt fest, zum Beispiel <code>name = "Mia"</code>.',
+      '<code>input()</code> is waiting for input, but there is none. In the sandbox, enter it below the editor (one line per <code>input()</code>). Tasks have no input — set the value directly, for example <code>name = "Mia"</code>.'],
     [/takes \d+ positional arguments? but \d+ (?:was|were) given/,
       'Fehlt in der Methode das <code>self</code>? Jede Methode in einer Klasse braucht es als ersten Parameter: <code>def info(self):</code>.',
       'Is <code>self</code> missing in the method? Every method in a class needs it as its first parameter: <code>def info(self):</code>.'],
@@ -631,7 +651,7 @@
       const code = editor.getValue();
       btnRun.disabled = true;
       consoleEl.replaceChildren(h('span.dim', t('train.running')));
-      lastRun = await runner.run(code);
+      lastRun = await runner.run(code, null, inputBox.value.split('\n').filter((l, i, a) => l !== '' || i < a.length - 1));
       lastCode = code;
       btnRun.disabled = false;
       consoleEl.replaceChildren();
@@ -642,6 +662,11 @@
       return lastRun;
     }
 
+    const inputBox = h('textarea.input-box', {
+      rows: 2, spellcheck: false, placeholder: t('sandbox.inputsHint'), 'aria-label': t('sandbox.inputs'),
+      oninput: () => Store.setSandboxInput(topic.id, inputBox.value),
+    });
+    inputBox.value = Store.sandboxInput(topic.id);
     const btnRun = h('button.btn.btn-primary', { onclick: run }, t('sandbox.run'));
     const btnPy = h('button.btn.btn-ghost', {
       onclick: () => download(`${topic.slug}-sandbox.py`, editor.getValue(), 'text/x-python'),
@@ -660,6 +685,7 @@
       h('div.sandbox-bar', btnRun, btnPy, btnMd, h('span.spacer'), btnReset,
         h('span.kbd-hint', h('kbd', '⌘'), ' / ', h('kbd', t('kbd.ctrl')), ' + ', h('kbd', '↵'))),
       editor.el,
+      h('label.input-wrap', h('span.input-label', t('sandbox.inputs')), inputBox),
       consoleEl,
     ));
   }
