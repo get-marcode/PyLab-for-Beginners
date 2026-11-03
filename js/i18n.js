@@ -127,6 +127,8 @@ const I18n = (() => {
       'rail.openLearn': 'Erklärung lesen',
 
       'timer.title': 'Lernzeit & Pausen',
+      'timer.start': 'Timer starten',
+      'timer.stop': 'Timer anhalten',
       'timer.min': 'min',
       'timer.heading': 'Lernzeit heute',
       'timer.breakNow': 'Pause?',
@@ -501,6 +503,8 @@ const I18n = (() => {
       'rail.openLearn': 'Read the explanation',
 
       'timer.title': 'Study time & breaks',
+      'timer.start': 'Start timer',
+      'timer.stop': 'Pause timer',
       'timer.min': 'min',
       'timer.heading': 'Study time today',
       'timer.breakNow': 'Break?',

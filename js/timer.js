@@ -40,6 +40,9 @@ const PyLabTimer = (() => {
   let lastTick = Date.now();
   let toastTimer = 0;
   let lastLabelMin = -1;
+  /* Läuft nur nach bewusstem Start; innerhalb einer Sitzung (z. B. beim Sprachwechsel) bleibt der Zustand erhalten. */
+  let running = false;
+  try { running = sessionStorage.getItem('pylab.timer.run') === '1'; } catch (e) { /* ohne Speicher: startet angehalten */ }
 
   /* ----------------------------------------------------------- Format */
   const minutes = (sec) => Math.floor(sec / 60);
@@ -48,6 +51,13 @@ const PyLabTimer = (() => {
     return m >= 60 ? `${Math.floor(m / 60)} ${t('timer.h')} ${String(m % 60).padStart(2, '0')} ${t('timer.min')}` : `${m} ${t('timer.min')}`;
   };
   const fmtClock = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+  /* Laufende Anzeige mit Sekunden: m:ss, ab einer Stunde h:mm:ss */
+  const fmtLive = (sec) => {
+    const s = Math.floor(sec);
+    const hh = Math.floor(s / 3600);
+    const rest = s % 3600;
+    return hh ? `${hh}:${String(Math.floor(rest / 60)).padStart(2, '0')}:${String(rest % 60).padStart(2, '0')}` : fmtClock(s);
+  };
 
   /* ------------------------------------------------------------- DOM */
   const wrap = document.getElementById('timerWrap');
@@ -61,11 +71,13 @@ const PyLabTimer = (() => {
   const ringSvg = mk('svg', { viewBox: '0 0 24 24', width: 24, height: 24, 'aria-hidden': 'true', class: 'timer-ring' });
   ringSvg.append(track, prog, hands);
 
-  const label = h('span.timer-text', fmtMin(0));
+  const label = h('span.timer-text', fmtLive(learned()));
   const pill = h('button.timer-pill', {
     type: 'button', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', title: t('timer.title'),
     onclick: () => togglePop(pop.hidden),
   }, ringSvg, label);
+
+  const toggle = h('button.timer-toggle', { type: 'button', onclick: () => setRunning(!running) });
 
   /* Erinnerungskarte (nicht modal) */
   const toastTitle = h('strong');
@@ -107,7 +119,7 @@ const PyLabTimer = (() => {
       h('label', t('timer.breakLen') + ' ', selBreak)),
     h('button.timer-link', { type: 'button', onclick: () => { if (confirm(t('timer.resetConfirm'))) { st.days[dayKey()] = 0; save(); paint(); } } }, t('timer.resetToday')),
   );
-  wrap.append(pill, toast, pop);
+  wrap.append(pill, toggle, toast, pop);
 
   /* ----------------------------------------------------------- Anzeige */
   function paint() {
@@ -115,9 +127,12 @@ const PyLabTimer = (() => {
     const target = st.interval * 60;
     const frac = inBreak ? 1 - breakLeft / (st.breakMin * 60) : Math.min(1, session / target);
     prog.style.strokeDashoffset = C * (1 - frac);
+    pill.classList.toggle('is-paused', !running);
+    toggle.textContent = running ? '❚❚' : '▶';
+    toggle.title = toggle.ariaLabel = running ? t('timer.stop') : t('timer.start');
     pill.classList.toggle('is-break', inBreak);
     pill.classList.toggle('is-due', due && !inBreak);
-    label.textContent = inBreak ? t('timer.breakCount', { t: fmtClock(Math.ceil(breakLeft)) }) : due ? t('timer.breakNow') : fmtMin(session);
+    label.textContent = inBreak ? t('timer.breakCount', { t: fmtClock(Math.ceil(breakLeft)) }) : due ? t('timer.breakNow') : fmtLive(learned());
     pill.title = t('timer.tooltip', { today: fmtMin(learned()), session: fmtMin(session) });
     if (minutes(session) !== lastLabelMin) {
       lastLabelMin = minutes(session);
@@ -128,18 +143,21 @@ const PyLabTimer = (() => {
 
   function paintPop() {
     const inBreak = mode === 'break';
-    bigToday.textContent = fmtMin(learned());
+    bigToday.textContent = fmtLive(learned());
     sessionLine.textContent = inBreak
       ? t('timer.breakLeft', { t: fmtClock(Math.ceil(breakLeft)) })
-      : t('timer.sinceBreak', { session: minutes(session), max: st.interval });
+      : t('timer.sinceBreak', { session: fmtLive(session), max: st.interval });
     sessionBar.style.width = Math.min(100, (inBreak ? 100 * (1 - breakLeft / (st.breakMin * 60)) : (100 * session) / (st.interval * 60))) + '%';
     btnBreak.textContent = inBreak ? t('timer.endBreak') : t('timer.startBreak');
     const names = t('timer.days').split(',');
-    const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); return d; });
+    /* Kalenderwoche von Montag bis Sonntag */
+    const today = dayKey();
+    const sinceMonday = (new Date().getDay() + 6) % 7;
+    const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - sinceMonday + i); return d; });
     const max = Math.max(1800, ...days.map((d) => learned(dayKey(d))));
     weekEl.replaceChildren(...days.map((d, i) => {
       const v = learned(dayKey(d));
-      return h('div.wk' + (i === 6 ? '.is-today' : ''), { title: `${names[d.getDay()]}: ${fmtMin(v)}` },
+      return h('div.wk' + (dayKey(d) === today ? '.is-today' : i > sinceMonday ? '.is-future' : ''), { title: `${names[d.getDay()]}: ${fmtMin(v)}` },
         h('i', { style: { height: Math.max(3, Math.round((v / max) * 36)) + 'px' } }), h('span', names[d.getDay()]));
     }));
   }
@@ -182,7 +200,18 @@ const PyLabTimer = (() => {
   }
 
   /* ----------------------------------------------------------- Zählen */
+  function setRunning(on) {
+    running = on;
+    try { sessionStorage.setItem('pylab.timer.run', on ? '1' : '0'); } catch (e) { /* nur dieser Tab */ }
+    lastTick = Date.now();
+    lastInput = Date.now();
+    away = 0;
+    if (!on) { hideToast(); save(); }
+    paint();
+  }
+
   function step(dt, active) {
+    if (!running) return;
     if (mode === 'break') {
       breakLeft -= dt;
       if (breakLeft <= 0) endBreak(true); else paint();
@@ -231,7 +260,9 @@ const PyLabTimer = (() => {
 
   /* Für Tests und Demos: Sekunden aktiver Lernzeit simulieren. */
   return {
-    advance(sec) { for (let i = 0; i < sec; i++) step(1, true); },
-    state: () => ({ session, due, mode, breakLeft, today: learned() }),
+    advance(sec) { const r = running; running = true; for (let i = 0; i < sec; i++) step(1, true); running = r; },
+    start: () => setRunning(true),
+    stop: () => setRunning(false),
+    state: () => ({ running, session, due, mode, breakLeft, today: learned() }),
   };
 })();
