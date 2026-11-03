@@ -3,8 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
+  <meta name="color-scheme" content="dark light">
   <meta name="theme-color" content="#09090b">
+  <link rel="icon" type="image/png" href="assets/marcode-logo.png">
+  <script>
+    /* Theme vor dem ersten Rendern setzen, damit nichts flackert. */
+    try { var t = localStorage.getItem('pylab.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
   <title>PyLab — Python Trainer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,18 +17,19 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div class="bg-grid" aria-hidden="true"></div>
-  <div class="bg-glow" aria-hidden="true"></div>
-
   <header class="topbar">
     <button class="icon-btn" id="menuBtn" aria-label="Menü öffnen">☰</button>
     <a class="brand" href="#/dashboard" aria-label="Zum Dashboard">
-      <span class="brand-mark">py</span>
+      <img class="brand-mark" src="assets/marcode-logo.png" alt="MarCode-Logo" width="36" height="36">
       <span class="brand-name">PyLab</span>
       <span class="brand-tag">Deep Space IDE</span>
     </a>
     <div class="crumbs" id="crumbs"></div>
     <div class="topbar-right">
+      <button class="theme-btn" id="themeBtn" type="button" aria-label="Zum hellen Modus wechseln" title="Hell / Dunkel umschalten">
+        <svg class="ico-sun" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="ico-moon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg>
+      </button>
       <div class="py-status" id="pyStatus" data-state="loading"><i></i><span>Python lädt …</span></div>
       <div id="topRing" title="Gesamtfortschritt"></div>
     </div>

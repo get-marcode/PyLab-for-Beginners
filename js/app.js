@@ -250,6 +250,27 @@
     els.status.querySelector('span').textContent = label;
   });
 
+  /** Übersetzt typische Python-Fehlermeldungen in einen kurzen Anfänger-Hinweis. */
+  const ERROR_HINTS = [
+    [/takes \d+ positional arguments? but \d+ (?:was|were) given/, 'Fehlt in der Methode das <code>self</code>? Jede Methode in einer Klasse braucht es als ersten Parameter: <code>def info(self):</code>.'],
+    [/missing \d+ required positional arguments?/, 'Beim Aufruf fehlt mindestens ein Argument. Zähle die Parameter in <code>def …</code> und vergleiche sie mit dem Aufruf.'],
+    [/object has no attribute/, 'Dieses Attribut gibt es am Objekt nicht. Wurde es im <code>__init__</code> mit <code>self.name = …</code> angelegt — und mit <code>self.</code> davor?'],
+    [/name '(?:self|\w+)' is not defined/, 'Python kennt diesen Namen hier nicht. Tippfehler? In einer Methode erreichst du Attribute nur über <code>self.attribut</code>, nicht über den nackten Namen.'],
+    [/IndentationError|expected an indented block/, 'Nach einem Doppelpunkt (<code>:</code>) muss der Code eingerückt sein — vier Leerzeichen pro Ebene.'],
+    [/SyntaxError: (?:expected ':'|invalid syntax)/, 'Schau in der gemeldeten Zeile nach: fehlt ein Doppelpunkt, eine Klammer oder ein Anführungszeichen?'],
+    [/KeyError/, 'Dieser Schlüssel steht nicht im Dictionary. <code>d.get(schluessel)</code> liefert stattdessen <code>None</code>, statt abzustürzen.'],
+    [/IndexError/, 'Der Index liegt außerhalb der Liste. Gültig sind <code>0</code> bis <code>len(liste) - 1</code>; bei einer leeren Liste gibt es keinen Index.'],
+    [/RecursionError/, 'Die Funktion ruft sich endlos selbst auf. Fehlt der <strong>Basisfall</strong> (<code>if … : return</code>), oder nähert sich der Aufruf ihm nicht?'],
+    [/NoneType/, 'Irgendwo ist <code>None</code> herausgekommen. Fehlt in einer Funktion ein <code>return</code> — oder wurde ein leerer Fall nicht abgefangen?'],
+    [/ZeroDivisionError/, 'Teilen durch 0 geht nicht. Prüfe den Nenner mit <code>if nenner == 0:</code>, bevor du teilst.'],
+    [/list indices must be integers/, 'In eckigen Klammern einer Liste muss eine Zahl stehen. Ob ein Wert <em>enthalten</em> ist, fragst du mit <code>wert in liste</code>.'],
+  ];
+  function explainError(text) {
+    const hit = ERROR_HINTS.find(([re]) => re.test(text || ''));
+    return hit ? hit[1] : null;
+  }
+  const hintBox = (text) => { const e = explainError(text); return e ? h('div.err-hint', { html: '<strong>💡 Tipp:</strong> ' + e }) : null; };
+
   function toast(text) {
     const t = h('div.toast', text);
     document.body.append(t);
@@ -309,7 +330,7 @@
   function viewTopic(topic, mode) {
     const root = h('div.view');
     root.append(h('header.topic-head',
-      h('p.eyebrow', `Modul ${topic.id - 1} · ${topic.scenario || 'In Arbeit'}`),
+      h('p.eyebrow', `Modul ${topic.id} · ${topic.scenario || 'In Arbeit'}`),
       h('h1', topic.title, topic.subtitle && h('small', topic.subtitle)),
       topic.lead && h('p.lead', { html: topic.lead }),
     ));
@@ -428,7 +449,7 @@
       function printResult(r) {
         consoleEl.replaceChildren();
         if (r.stdout) consoleEl.append(document.createTextNode(r.stdout));
-        if (r.error) consoleEl.append(h('div.err', r.error));
+        if (r.error) consoleEl.append(h('div.err', r.error), hintBox(r.error));
       }
 
       async function execute(withTests) {
@@ -467,7 +488,7 @@
         const text = msg.startsWith('AssertionError: ') ? msg.slice(16)
           : msg === 'AssertionError' ? 'Ein Testfall schlägt fehl — prüfe auch die Randfälle.'
           : msg ? `Beim Prüfen ist ein Fehler aufgetreten: ${msg}` : 'Der Test ist fehlgeschlagen.';
-        feedback.replaceChildren(h('div.banner.bad', '✗ ' + text));
+        feedback.replaceChildren(h('div.banner.bad', '✗ ' + text), hintBox(msg));
       }
 
       bench.append(
@@ -516,7 +537,7 @@
       btnRun.disabled = false;
       consoleEl.replaceChildren();
       if (lastRun.stdout) consoleEl.append(document.createTextNode(lastRun.stdout));
-      if (lastRun.error) consoleEl.append(h('div.err', lastRun.error));
+      if (lastRun.error) consoleEl.append(h('div.err', lastRun.error), hintBox(lastRun.error));
       if (!lastRun.stdout && !lastRun.error) consoleEl.append(h('span.dim', '(keine Ausgabe)'));
       if (!lastRun.error && Store.markSandbox(topic.id)) refreshChrome();
       return lastRun;
@@ -560,6 +581,20 @@
     refreshChrome(route);
     window.scrollTo({ top: 0 });
   }
+
+  /* ----------------------------------------------------------- Theme */
+  const themeBtn = document.getElementById('themeBtn');
+  function applyTheme(t) {
+    document.documentElement.dataset.theme = t;
+    themeBtn.setAttribute('aria-label', t === 'light' ? 'Zum dunklen Modus wechseln' : 'Zum hellen Modus wechseln');
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#f3f4f8' : '#09090b');
+  }
+  applyTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark');
+  themeBtn.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+    applyTheme(next);
+    try { localStorage.setItem('pylab.theme', next); } catch (e) { /* privater Modus: Wahl gilt nur bis zum Neuladen */ }
+  });
 
   /* ----------------------------------------------------------- Boot */
   document.getElementById('menuBtn').addEventListener('click', () => document.body.classList.toggle('nav-open'));

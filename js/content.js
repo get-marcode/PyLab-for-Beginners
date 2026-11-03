@@ -3166,14 +3166,25 @@ assert ist_sackgasse(netz, "Nirgendwo") is False, "Unbekannte Haltestelle: False
           id: 'g5', level: 'Algorithmus', title: 'Kürzeste Route per BFS',
           scenario: 'Der Routenplaner bekommt sein Herzstück: Von einer Starthaltestelle soll der Weg mit den <em>wenigsten Fahrten</em> zum Ziel gefunden werden. Genau dafür ist die Breitensuche gemacht — sie erkundet erst alle Nachbarn, dann deren Nachbarn und so weiter.',
           goal: 'Schreibe <code>finde_route(netz, start, ziel)</code>. Rückgabe: die Route als Liste der Haltestellen <em>inklusive</em> Start und Ziel (kürzeste Route). Gibt es keine Verbindung oder ist eine Haltestelle unbekannt, kommt <code>None</code> zurück. Kreise im Netz dürfen die Suche nicht endlos laufen lassen.',
-          hint: 'Merke dir in einer Warteschlange ganze <strong>Wege</strong> (Listen), startend mit <code>[[start]]</code>. Nimm den vordersten Weg (<code>pop(0)</code> oder <code>deque.popleft()</code>); endet er am Ziel, bist du fertig. Sonst hängst du für jeden noch nicht besuchten Nachbarn einen neuen, um ihn verlängerten Weg hinten an. Besuchte Haltestellen kommen in eine Menge <code>besucht</code>.',
+          hint: 'Merke dir in einer Warteschlange ganze <strong>Wege</strong> (Listen), startend mit <code>[[start]]</code>. Nimm den vordersten Weg (<code>pop(0)</code> oder <code>deque.popleft()</code>); endet er am Ziel, bist du fertig. Sonst hängst du für jeden noch nicht besuchten Nachbarn einen neuen, um ihn verlängerten Weg hinten an. Besuchte Haltestellen kommen in eine Menge <code>besucht</code>. Beispiel: Aus <code>["A"]</code> werden die Wege <code>["A", "B"]</code> und <code>["A", "C"]</code> — <code>weg + [nachbar]</code> baut jeweils eine verlängerte Kopie.',
           starter: py`def finde_route(netz, start, ziel):
-    # 1. Unbekannte Haltestellen -> None
-    # 2. Warteschlange mit dem Weg [start] anlegen, besucht = {start}
-    # 3. Solange Wege warten: vordersten Weg nehmen, Ziel erreicht? -> fertig
-    #    sonst jeden unbesuchten Nachbarn mit verlängertem Weg anhängen
-    # 4. Nichts gefunden -> None
-    pass
+    # Schritt 1 (geschenkt): unbekannte Haltestellen gibt es nicht im Netz
+    if start not in netz or ziel not in netz:
+        return None
+
+    # Schritt 2 (geschenkt): Die Warteschlange enthält ganze WEGE, nicht nur Haltestellen.
+    warte = [[start]]      # z. B. [["A"]] -> später [["A", "B"], ["A", "C"]]
+    besucht = {start}
+
+    # Schritt 3 (dein Teil): Solange noch Wege warten ...
+    #   a) weg = warte.pop(0)         -> der vorderste Weg
+    #   b) weg[-1] ist die Haltestelle, an der du gerade stehst
+    #   c) ist sie das Ziel?          -> return weg
+    #   d) sonst: für jeden Nachbarn in netz[weg[-1]], der noch nicht in besucht ist:
+    #        besucht.add(nachbar) und  warte.append(weg + [nachbar])
+
+    # Schritt 4 (geschenkt): Die Warteschlange ist leer, das Ziel wurde nie erreicht
+    return None
 `,
           solution: py`from collections import deque
 
