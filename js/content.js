@@ -2394,7 +2394,7 @@ assert bubble_sort([9, 8, 7, 6, 5, 4, 3, 2, 1]) == [1, 2, 3, 4, 5, 6, 7, 8, 9], 
           id: 'so2', level: 'Update', title: 'Rangliste nach Punkten',
           scenario: 'Die Highscore-Liste besteht aus Spielern mit Name und Punkten. Wer die meisten Punkte hat, steht oben; bei Gleichstand entscheidet der Name alphabetisch.',
           goal: 'Schreibe <code>rangliste(spieler)</code>. <code>spieler</code> ist eine Liste von Dictionaries mit <code>"name"</code> und <code>"punkte"</code>. Gib eine <strong>neue</strong> Liste zurück: absteigend nach Punkten, bei gleichen Punkten aufsteigend nach Name. Die Originalliste bleibt unverändert. Nutze <code>sorted()</code> mit dem Parameter <code>key</code>.',
-          hint: 'Der <code>key</code> bestimmt, wonach sortiert wird. Ein Tuple als Schlüssel sortiert nach dem ersten Eintrag, bei Gleichstand nach dem zweiten: <code>key=lambda s: (-s["punkte"], s["name"])</code>. Das Minus dreht die Punkte-Reihenfolge um.',
+          hint: 'Der <code>key</code> bestimmt, wonach sortiert wird. Ein Tuple als Schlüssel sortiert nach dem ersten Eintrag, bei Gleichstand nach dem zweiten: <code>key=lambda s: (-s["punkte"], s["name"])</code>. Das Minus dreht die Punkte-Reihenfolge um. <code>lambda s: …</code> ist eine kleine Funktion ohne Namen: <code>s</code> ist ein Spieler, hinter dem Doppelpunkt steht der Sortierschlüssel.',
           starter: py`def rangliste(spieler):
     pass
 `,

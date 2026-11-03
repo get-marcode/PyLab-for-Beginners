@@ -96,7 +96,7 @@ const Visuals = (() => {
     const pre = h('pre.ed-hl', { 'aria-hidden': 'true' }, code);
     const ta = h('textarea.ed-input', {
       spellcheck: 'false', autocapitalize: 'off', autocomplete: 'off', autocorrect: 'off',
-      'aria-label': 'Python-Code',
+      'aria-label': I18n.t('vis.pythonCode'),
     });
     const el = h('div.editor', gutter, h('div.ed-body', pre, ta));
 
@@ -341,7 +341,7 @@ const Visuals = (() => {
     const lineEls = cfg.lines.map((l, i) => h('div.code-line', { 'data-i': i }, h('span.ln', i + 1), h('span.src', { html: highlight(l) })));
     const mem = h('div.mem');
     const out = h('div.console-out');
-    const note = h('p.step-note', 'Drücke ▶ Schritt, um die erste Zeile auszuführen.');
+    const note = h('p.step-note', I18n.t('vis.pressStepFirst'));
     const layer = h('div.fly-layer');
     const cards = {};
 
@@ -396,14 +396,14 @@ const Visuals = (() => {
         mem.innerHTML = '';
         out.innerHTML = '';
         Object.keys(cards).forEach((k) => delete cards[k]);
-        note.textContent = 'Drücke ▶ Schritt, um die erste Zeile auszuführen.';
+        note.textContent = I18n.t('vis.pressStepFirst');
       },
     });
 
     root.append(
       h('div.scene-grid',
-        h('div.panel.panel-code', h('div.panel-title', 'Programm'), h('div.code-block', lineEls)),
-        h('div.panel', h('div.panel-title', 'Speicher'), mem, h('div.panel-title.mt', 'Konsole'), out),
+        h('div.panel.panel-code', h('div.panel-title', I18n.t('vis.program')), h('div.code-block', lineEls)),
+        h('div.panel', h('div.panel-title', I18n.t('vis.memory')), mem, h('div.panel-title.mt', I18n.t('vis.console')), out),
       ),
       note, ctl.el, layer,
     );
@@ -415,7 +415,7 @@ const Visuals = (() => {
   scenes.typeLab = (root, cfg, ctx) => {
     let selected = null;
     const log = h('div.type-log');
-    const hint = h('p.step-note', 'Klicke einen Wert an, dann eine Umwandlung.');
+    const hint = h('p.step-note', I18n.t('vis.clickValueThenConv'));
     const fmtNum = (x) => (Number.isInteger(x) ? x.toFixed(1) : String(x));
     const repr = (v) => (typeof v === 'string' ? JSON.stringify(v) : v === true ? 'True' : v === false ? 'False' : String(v));
     const kindOf = (v) => (typeof v === 'string' ? 'str' : typeof v === 'boolean' ? 'bool' : v && v.f ? 'float' : 'int');
@@ -452,14 +452,14 @@ const Visuals = (() => {
     function select(item, c) {
       selected = item;
       chips.forEach((x) => x.classList.toggle('is-sel', x === c));
-      hint.innerHTML = `Gewählt: <code>${esc(item.label)}</code> — jetzt eine Funktion anklicken.`;
+      hint.innerHTML = I18n.t('vis.chosen', { label: esc(item.label) });
     }
 
     const funcs = cfg.funcs.map((f) =>
       h('button.btn.btn-ghost.fn-btn', {
         onclick: () => {
           if (!selected) {
-            hint.textContent = 'Wähle zuerst einen Wert aus.';
+            hint.textContent = I18n.t('vis.chooseValueFirst');
             return;
           }
           ctx.touch();
@@ -487,11 +487,11 @@ const Visuals = (() => {
 
     root.append(
       h('div.panel',
-        h('div.panel-title', 'Werte'), h('div.chip-row', chips),
-        h('div.panel-title.mt', 'Umwandlung'), h('div.chip-row', funcs),
+        h('div.panel-title', I18n.t('vis.values')), h('div.chip-row', chips),
+        h('div.panel-title.mt', I18n.t('vis.conversion')), h('div.chip-row', funcs),
       ),
       hint,
-      h('div.panel', h('div.panel-title', 'Ergebnisse'), log),
+      h('div.panel', h('div.panel-title', I18n.t('vis.results')), log),
     );
     return { destroy() {} };
   };
@@ -514,12 +514,12 @@ const Visuals = (() => {
       const gesamt = summe + pfand;
       const name = state.artikel || '—';
       const lines = [
-        'KAFFEEHAUS PYTHON'.padStart(Math.floor((WIDTH + 17) / 2)),
+        I18n.t('vis.receiptTitle').padStart(Math.floor((WIDTH + 17) / 2)),
         '─'.repeat(WIDTH),
         `${state.menge}x ${pad(name, 12)}${rpad(fmt(summe), 8)} €`,
       ];
       if (state.pfandAn) lines.push(`${pad('   Pfand', 15)}${rpad(fmt(pfand), 8)} €`);
-      lines.push('─'.repeat(WIDTH), `${pad('SUMME', 15)}${rpad(fmt(gesamt), 8)} €`);
+      lines.push('─'.repeat(WIDTH), `${pad(I18n.t('vis.totalCaps'), 15)}${rpad(fmt(gesamt), 8)} €`);
       paper.textContent = lines.join('\n');
       paper.animate([{ opacity: 0.55 }, { opacity: 1 }], { duration: 220 });
 
@@ -531,39 +531,39 @@ const Visuals = (() => {
         '',
         'print(f"{menge}x {artikel:<12}{preis * menge:>8.2f} €")',
         state.pfandAn ? 'print(f"   Pfand      {pfand:>8.2f} €")' : null,
-        'print(f"SUMME          {gesamt:>8.2f} €")',
+        `print(f"${I18n.t('vis.totalCaps')}          {gesamt:>8.2f} €")`,
       ].filter((l) => l !== null);
       code.innerHTML = highlight(src.join('\n'));
     }
 
     const bind = (el, fn) => el.addEventListener('input', () => { ctx.touch(); fn(el.value); render(); });
-    const inName = h('input.field', { type: 'text', value: state.artikel, maxlength: 12, 'aria-label': 'Artikel' });
-    const inPrice = h('input.field', { type: 'number', value: state.preis, min: 0, max: 99, step: 0.1, 'aria-label': 'Preis' });
-    const qty = h('input', { type: 'range', min: 1, max: 9, value: state.menge, 'aria-label': 'Menge' });
+    const inName = h('input.field', { type: 'text', value: state.artikel, maxlength: 12, 'aria-label': I18n.t('vis.item') });
+    const inPrice = h('input.field', { type: 'number', value: state.preis, min: 0, max: 99, step: 0.1, 'aria-label': I18n.t('vis.priceLabel') });
+    const qty = h('input', { type: 'range', min: 1, max: 9, value: state.menge, 'aria-label': I18n.t('vis.quantity') });
     const qtyOut = h('output', state.menge);
-    const pf = h('input', { type: 'checkbox', 'aria-label': 'Pfand' });
+    const pf = h('input', { type: 'checkbox', 'aria-label': I18n.t('vis.depositLabel') });
     bind(inName, (v) => (state.artikel = v));
     bind(inPrice, (v) => (state.preis = Math.max(0, parseFloat(v) || 0)));
     bind(qty, (v) => { state.menge = parseInt(v, 10); qtyOut.textContent = v; });
     pf.addEventListener('change', () => { ctx.touch(); state.pfandAn = pf.checked; render(); });
 
     const legend = h('ul.legend',
-      h('li', h('code', ':<12'), ' linksbündig, 12 Zeichen breit'),
-      h('li', h('code', ':>8.2f'), ' rechtsbündig, 8 breit, 2 Nachkommastellen'),
+      h('li', h('code', ':<12'), I18n.t('vis.leftAlign')),
+      h('li', h('code', ':>8.2f'), I18n.t('vis.rightAlign')),
       h('li', h('code', '{preis * menge}'), ' rechnen direkt im f-String'),
     );
 
     root.append(
       h('div.scene-grid',
         h('div.panel',
-          h('div.panel-title', 'Eingaben'),
-          h('label.row', 'Artikel', inName),
-          h('label.row', 'Preis in €', inPrice),
-          h('label.row', 'Menge', h('span.range-wrap', qty, qtyOut)),
-          h('label.row.row-check', pf, 'Pfand 0,25 € je Stück'),
+          h('div.panel-title', I18n.t('vis.inputs')),
+          h('label.row', I18n.t('vis.item'), inName),
+          h('label.row', I18n.t('vis.priceIn'), inPrice),
+          h('label.row', I18n.t('vis.quantity'), h('span.range-wrap', qty, qtyOut)),
+          h('label.row.row-check', pf, I18n.t('vis.depositEach')),
           h('div.panel-title.mt', 'Code'), code,
         ),
-        h('div.panel.panel-paper', h('div.panel-title', 'Bon'), paper),
+        h('div.panel.panel-paper', h('div.panel-title', I18n.t('vis.receipt')), paper),
       ),
       legend,
     );
@@ -586,7 +586,7 @@ const Visuals = (() => {
     );
     const gauge = h('div.gauge', zones, marker);
 
-    const slider = h('input.slider', { type: 'range', min: cfg.min, max: cfg.max, value, 'aria-label': 'Temperatur' });
+    const slider = h('input.slider', { type: 'range', min: cfg.min, max: cfg.max, value, 'aria-label': I18n.t('vis.temperature') });
     const lamp = h('div.lamp-big');
     const verdict = h('div.verdict');
 
@@ -618,12 +618,12 @@ const Visuals = (() => {
         if (passed) {
           row.condRow.classList.add('is-skipped');
           row.bodyRow.classList.add('is-skipped');
-          row.badge.textContent = 'übersprungen';
+          row.badge.textContent = I18n.t('vis.skipped');
         } else if (truth) {
           hit = r;
           row.condRow.classList.add('is-active');
           row.bodyRow.classList.add('is-active', 'is-hit');
-          row.badge.textContent = r.cond ? 'True' : 'sonst';
+          row.badge.textContent = r.cond ? 'True' : I18n.t('vis.elseBadge');
           row.badge.classList.add('ok');
         } else {
           row.badge.textContent = 'False';
@@ -642,9 +642,9 @@ const Visuals = (() => {
     root.append(
       h('div.scene-grid',
         h('div.panel', h('div.panel-title', 'Sensor'), gauge, slider, presets, h('div.lamp-row', lamp, verdict)),
-        h('div.panel.panel-code', h('div.panel-title', 'Entscheidung'), codeBlock),
+        h('div.panel.panel-code', h('div.panel-title', I18n.t('vis.decision')), codeBlock),
       ),
-      h('p.step-note', 'Python prüft von oben nach unten und nimmt <strong>den ersten</strong> Zweig, dessen Bedingung stimmt. Teste den Grenzfall 80: <code>80 &gt; 80</code> ist <em>False</em>.'),
+      h('p.step-note', I18n.t('vis.ifNote')),
     );
     update();
     return { destroy() {} };
@@ -672,28 +672,28 @@ const Visuals = (() => {
 
     const vars = { wert: h('span.var-val', '–'), summe: h('span.var-val', '–'), hoechster: h('span.var-val', '–') };
     const memEl = h('div.mem', Object.entries(vars).map(([k, v]) => h('div.var', h('span.var-name', k), v)));
-    const note = h('p.step-note', 'Drücke ▶ Schritt: Die Schleife besucht jeden Balken genau einmal.');
+    const note = h('p.step-note', I18n.t('vis.loopNote'));
 
     // Schritte vorab berechnen
     const steps = [];
     let summe = 0;
     let hoechster = 0;
-    steps.push({ line: 0, apply: () => set({ summe: 0 }), note: '<code>summe</code> startet bei 0 — der Zähler muss <em>vor</em> der Schleife existieren.' });
-    steps.push({ line: 1, apply: () => set({ hoechster: 0 }), note: '<code>hoechster</code> startet bei 0, jeder echte Messwert ist größer.' });
+    steps.push({ line: 0, apply: () => set({ summe: 0 }), note: I18n.t('vis.sumStart') });
+    steps.push({ line: 1, apply: () => set({ hoechster: 0 }), note: I18n.t('vis.maxStart') });
     values.forEach((v, i) => {
-      steps.push({ line: 2, idx: i, apply: () => set({ wert: v }), note: `Durchlauf ${i + 1}: <code>wert</code> bekommt den nächsten Listenwert, <strong>${v}</strong>.` });
+      steps.push({ line: 2, idx: i, apply: () => set({ wert: v }), note: I18n.t('vis.passValue', { n: i + 1, v }) });
       summe = +(summe + v).toFixed(2);
       const s = summe;
       steps.push({ line: 3, idx: i, apply: () => set({ summe: s }), note: `<code>summe += wert</code> → ${s}.` });
       const bigger = v > hoechster;
-      steps.push({ line: 4, idx: i, apply: () => {}, note: `<code>${v} &gt; ${hoechster}</code> ist <strong>${bigger ? 'True' : 'False'}</strong>${bigger ? '' : ' — der Block wird übersprungen'}.`, flag: bigger ? 'yes' : 'no' });
+      steps.push({ line: 4, idx: i, apply: () => {}, note: I18n.t('vis.compareNote', { v, h: hoechster, res: bigger ? 'True' : 'False', tail: bigger ? '' : I18n.t('vis.skipBlock') }), flag: bigger ? 'yes' : 'no' });
       if (bigger) {
         const old = hoechster;
         hoechster = v;
-        steps.push({ line: 5, idx: i, apply: () => { set({ hoechster: v }); crown(i); }, note: `Neuer Höchstwert statt ${old}: <strong>${v}</strong>.` });
+        steps.push({ line: 5, idx: i, apply: () => { set({ hoechster: v }); crown(i); }, note: I18n.t('vis.newMax', { old, v }) });
       }
     });
-    steps.push({ line: -1, idx: -1, apply: () => {}, note: `Fertig. Die Liste ist durch: Summe <strong>${summe}</strong>, Maximum <strong>${hoechster}</strong>.` });
+    steps.push({ line: -1, idx: -1, apply: () => {}, note: I18n.t('vis.loopDone', { summe, hoechster }) });
 
     function set(obj) {
       for (const [k, v] of Object.entries(obj)) {
@@ -743,7 +743,7 @@ const Visuals = (() => {
         bars.forEach((b) => b.classList.remove('is-now', 'is-done', 'is-max'));
         pointer.style.opacity = 0;
         Object.values(vars).forEach((v) => (v.textContent = '–'));
-        note.textContent = 'Drücke ▶ Schritt: Die Schleife besucht jeden Balken genau einmal.';
+        note.textContent = I18n.t('vis.loopNote');
       },
     });
 
@@ -751,7 +751,7 @@ const Visuals = (() => {
     root.append(
       h('div.scene-grid',
         h('div.panel', h('div.panel-title', 'messwerte = [' + values.join(', ') + ']'), barWrap, memEl),
-        h('div.panel.panel-code', h('div.panel-title', 'Schleife'), h('div.code-block', lineEls)),
+        h('div.panel.panel-code', h('div.panel-title', I18n.t('vis.loop')), h('div.code-block', lineEls)),
       ),
       note, ctl.el,
     );
@@ -787,9 +787,9 @@ const Visuals = (() => {
     const varTries = h('span.var-val', '0');
     const varIn = h('span.var-val', 'False');
     const cond = h('span.badge', '—');
-    const status = h('p.step-note', `Das Passwort lautet <code>${cfg.password}</code> — oder probiere ein falsches aus.`);
-    const input = h('input.field', { type: 'text', placeholder: 'Passwort', 'aria-label': 'Passwort', autocomplete: 'off' });
-    const btn = h('button.btn.btn-primary', { onclick: attempt }, 'Anmelden');
+    const status = h('p.step-note', I18n.t('vis.passwordHint', { pw: cfg.password }));
+    const input = h('input.field', { type: 'text', placeholder: I18n.t('vis.passwordLabel'), 'aria-label': I18n.t('vis.passwordLabel'), autocomplete: 'off' });
+    const btn = h('button.btn.btn-primary', { onclick: attempt }, I18n.t('vis.logIn'));
     input.addEventListener('keydown', (e) => e.key === 'Enter' && attempt());
 
     function render() {
@@ -816,15 +816,15 @@ const Visuals = (() => {
       if (guess === cfg.password) {
         await flash(4);
         loggedIn = true;
-        status.innerHTML = '<strong>Zugang gewährt.</strong> <code>eingeloggt</code> ist jetzt True — die Schleifenbedingung kippt, die Schleife endet.';
+        status.innerHTML = I18n.t('vis.accessGranted');
       } else {
         await flash(5, 200);
         await flash(6);
         tries++;
         lock.animate([{ transform: 'translateX(-9px)' }, { transform: 'translateX(9px)' }, { transform: 'translateX(-5px)' }, { transform: 'none' }], { duration: 360 });
         status.innerHTML = tries >= cfg.maxTries
-          ? '<code>versuche &lt; 3</code> ist <strong>False</strong> — die Schleife endet, das Konto ist gesperrt.'
-          : `Falsch. <code>versuche</code> steigt auf ${tries}, die Schleife läuft weiter.`;
+          ? I18n.t('vis.lockedNote')
+          : I18n.t('vis.wrongTries', { tries });
       }
       cond.textContent = (tries < cfg.maxTries && !loggedIn) ? 'True' : 'False';
       cond.className = 'badge ' + ((tries < cfg.maxTries && !loggedIn) ? 'ok' : 'no');
@@ -837,7 +837,7 @@ const Visuals = (() => {
     function reset() {
       tries = 0; loggedIn = false; busy = false;
       cond.textContent = '—'; cond.className = 'badge';
-      status.innerHTML = `Das Passwort lautet <code>${cfg.password}</code> — oder probiere ein falsches aus.`;
+      status.innerHTML = I18n.t('vis.passwordHint', { pw: cfg.password });
       render();
     }
 
@@ -849,10 +849,10 @@ const Visuals = (() => {
           h('div.row-inline', input, btn),
           h('div.mem', h('div.var', h('span.var-name', 'versuche'), varTries), h('div.var', h('span.var-name', 'eingeloggt'), varIn)),
         ),
-        h('div.panel.panel-code', h('div.panel-title', 'Schleife ', cond), h('div.code-block', lineEls)),
+        h('div.panel.panel-code', h('div.panel-title', I18n.t('vis.loopSpace'), cond), h('div.code-block', lineEls)),
       ),
       status,
-      h('div.controls', h('button.btn.btn-ghost', { onclick: reset }, '↺ Neu starten')),
+      h('div.controls', h('button.btn.btn-ghost', { onclick: reset }, I18n.t('vis.restart'))),
     );
     render();
     return { destroy() { alive = false; } };
@@ -863,9 +863,9 @@ const Visuals = (() => {
   scenes.callStack = (root, cfg, ctx) => {
     const lineEls = cfg.lines.map((l, i) => h('div.code-line', h('span.ln', i + 1), h('span.src', { html: highlight(l) })));
     const stack = h('div.stack');
-    const depth = h('span.badge', 'Tiefe 1');
+    const depth = h('span.badge', I18n.t('vis.depth1'));
     const out = h('div.console-out');
-    const note = h('p.step-note', 'Drücke ▶ Schritt: Links läuft der Code, rechts wächst und schrumpft der Stack.');
+    const note = h('p.step-note', I18n.t('vis.stackNote'));
     let frames = [];
 
     function renderVars(f) {
@@ -882,7 +882,7 @@ const Visuals = (() => {
       frames = [makeFrame('<module>')];
       frames[0].el.classList.add('is-base');
       stack.append(frames[0].el);
-      depth.textContent = 'Tiefe 1';
+      depth.textContent = I18n.t('vis.depth1');
     }
     const top = () => frames[frames.length - 1];
     const markTop = () => frames.forEach((f, i) => f.el.classList.toggle('is-top', i === frames.length - 1));
@@ -909,7 +909,7 @@ const Visuals = (() => {
           top().head.append(h('span.ret', '↩ ' + s.ret));
         }
         if (s.out) out.append(h('div.out-line', s.out));
-        depth.textContent = 'Tiefe ' + frames.length;
+        depth.textContent = I18n.t('vis.depth') + frames.length;
         markTop();
         note.innerHTML = s.note;
       },
@@ -918,14 +918,14 @@ const Visuals = (() => {
         out.replaceChildren();
         resetFrames();
         markTop();
-        note.textContent = 'Drücke ▶ Schritt: Links läuft der Code, rechts wächst und schrumpft der Stack.';
+        note.textContent = I18n.t('vis.stackNote');
       },
     });
 
     root.append(
       h('div.scene-grid',
-        h('div.panel.panel-code', h('div.panel-title', 'Programm'), h('div.code-block', lineEls)),
-        h('div.panel', h('div.panel-title', 'Call Stack ', depth), stack, h('div.panel-title.mt', 'Konsole'), out),
+        h('div.panel.panel-code', h('div.panel-title', I18n.t('vis.program')), h('div.code-block', lineEls)),
+        h('div.panel', h('div.panel-title', 'Call Stack ', depth), stack, h('div.panel-title.mt', I18n.t('vis.console')), out),
       ),
       note, ctl.el,
     );
@@ -955,29 +955,29 @@ const Visuals = (() => {
         return h('tr' + (probe === v.name ? '.is-probe' : ''), { style: { '--i': i }, onclick: () => { probe = v.name; ctx.touch(); paint(); } },
           h('td', h('code', v.name)),
           h('td.muted', label(v.owner)),
-          h('td', h('span.badge.' + (visible ? 'ok' : 'no'), visible ? 'sichtbar' : 'unsichtbar')));
+          h('td', h('span.badge.' + (visible ? 'ok' : 'no'), visible ? I18n.t('vis.visible') : I18n.t('vis.invisible'))));
       }));
       result.replaceChildren();
       if (!probe) {
-        result.append(h('span.dim', 'Klicke eine Zeile der Tabelle, um print(variable) an dieser Stelle auszuprobieren.'));
+        result.append(h('span.dim', I18n.t('vis.clickRowPrint')));
         return;
       }
       const v = cfg.vars.find((x) => x.name === probe);
       const visible = v.owner === 'global' || v.owner === pos;
       result.append(h('div.dim', `# ${p.label}`), h('div', `print(${v.name})`),
         visible ? h('div', v.value) : h('div.err', `NameError: name '${v.name}' is not defined`),
-        h('div.dim', visible ? v.note : `${v.name} gehört zu ${label(v.owner)} — von hier aus nicht sichtbar.`));
+        h('div.dim', visible ? v.note : I18n.t('vis.notVisible', { name: v.name, owner: label(v.owner) })));
     }
 
     root.append(
-      h('div.panel', h('div.panel-title', 'Ich befinde mich …'), posRow),
+      h('div.panel', h('div.panel-title', I18n.t('vis.imIn')), posRow),
       h('div.scene-grid',
         h('div.panel.panel-code', h('div.panel-title', 'Code'), h('div.code-block', lineEls)),
-        h('div.panel', h('div.panel-title', 'Sichtbarkeit'),
-          h('table.scope-table', h('thead', h('tr', h('th', 'Variable'), h('th', 'gehört zu'), h('th', 'hier'))), tbody)),
+        h('div.panel', h('div.panel-title', I18n.t('vis.visibility')),
+          h('table.scope-table', h('thead', h('tr', h('th', 'Variable'), h('th', I18n.t('vis.belongsTo')), h('th', I18n.t('vis.here')))), tbody)),
       ),
-      h('div.panel', h('div.panel-title', 'Zugriff'), result),
-      h('p.step-note', 'Faustregel (<strong>LEGB</strong>): Python sucht erst lokal, dann in umgebenden Funktionen, dann global. Von außen schaut man <em>nie</em> in eine Funktion hinein.'),
+      h('div.panel', h('div.panel-title', I18n.t('vis.access')), result),
+      h('p.step-note', I18n.t('vis.legbRule')),
     );
     paint();
     return { destroy() {} };
@@ -1008,7 +1008,7 @@ const Visuals = (() => {
       loopBox.innerHTML = highlight(
         'ziel = []\nfor z in logs:\n' +
         (preset.cond ? `    if ${preset.cond}:\n        ziel.append(${preset.expr})` : `    ziel.append(${preset.expr})`));
-      gateCond.textContent = preset.cond || 'kein Filter';
+      gateCond.textContent = preset.cond || I18n.t('vis.noFilter');
     }
 
     const ctl = controlBar({
@@ -1048,12 +1048,12 @@ const Visuals = (() => {
       presetRow,
       h('div.panel', h('div.panel-title', 'Comprehension'), compBox),
       h('div.pipeline',
-        h('div.panel', h('div.panel-title', 'logs (Quelle)'), srcRow),
+        h('div.panel', h('div.panel-title', I18n.t('vis.logsSource')), srcRow),
         gate,
-        h('div.panel', h('div.panel-title', 'ziel (neue Liste) ', count), dstRow),
+        h('div.panel', h('div.panel-title', I18n.t('vis.targetList'), count), dstRow),
       ),
       ctl.el,
-      h('div.panel', h('div.panel-title', 'Dasselbe als for-Schleife'), loopBox),
+      h('div.panel', h('div.panel-title', I18n.t('vis.sameAsFor')), loopBox),
       layer,
     );
     paintPreset();
@@ -1078,7 +1078,7 @@ const Visuals = (() => {
     const moves = h('strong', '0');
     const cost = h('span.badge', '–');
     const size = h('strong', '0');
-    const note = h('p.step-note', 'Wähle eine Operation. Beim Einfügen vorne müssen <strong>alle</strong> Elemente Platz machen.');
+    const note = h('p.step-note', I18n.t('vis.chooseOp'));
     const btns = [];
 
     const nextValue = () => cfg.incoming[nextIn % cfg.incoming.length];
@@ -1118,15 +1118,15 @@ const Visuals = (() => {
 
     const ops = {
       append: () => guard(async () => {
-        if (items.length >= N) return setStats('Liste voll (Demo: ' + N + ' Slots)', 0, false);
+        if (items.length >= N) return setStats(I18n.t('vis.listFull', { n: N }), 0, false);
         const v = nextValue(); nextIn++;
         items.push(cell(v, items.length));
         setStats(`liste.append(${fmt(v)})`, 0, false);
-        note.innerHTML = '<code>append</code> setzt den Wert in den <strong>nächsten freien Slot</strong>. Nichts muss verschoben werden: Aufwand O(1).';
+        note.innerHTML = I18n.t('vis.appendNote');
         await sleep(250);
       }),
       insert: () => guard(async () => {
-        if (items.length >= N) return setStats('Liste voll (Demo: ' + N + ' Slots)', 0, false);
+        if (items.length >= N) return setStats(I18n.t('vis.listFull', { n: N }), 0, false);
         const v = nextValue(); nextIn++;
         let n = 0;
         setStats(`liste.insert(0, ${fmt(v)})`, 0, true);
@@ -1136,17 +1136,17 @@ const Visuals = (() => {
         }
         items.unshift(cell(v, 0));
         setStats(`liste.insert(0, ${fmt(v)})`, n, true);
-        note.innerHTML = `Slot 0 muss frei werden: <strong>${n}</strong> Element(e) rutschen einen Slot nach rechts, erst dann passt der neue Wert hinein. Je länger die Liste, desto mehr Arbeit: Aufwand O(n).`;
+        note.innerHTML = I18n.t('vis.insertFront', { n });
       }),
       pop: () => guard(async () => {
         if (!items.length) {
           setStats('liste.pop()', 0, false);
-          note.innerHTML = '<span class="err-text">IndexError: pop from empty list</span> — prüfe vorher, ob die Liste leer ist.';
+          note.innerHTML = I18n.t('vis.popEmptyNote');
           return;
         }
         const it = items.pop();
         setStats('liste.pop()', 0, false);
-        note.innerHTML = `<code>pop()</code> nimmt das <strong>letzte</strong> Element (${fmt(it.val)}) weg. Alle anderen bleiben, wo sie sind: O(1).`;
+        note.innerHTML = I18n.t('vis.popNote', { v: fmt(it.val) });
         await drop(it);
       }),
       pop0: () => guard(async () => {
@@ -1164,7 +1164,7 @@ const Visuals = (() => {
           moves.textContent = ++n;
         }
         setStats('liste.pop(0)', n, true);
-        note.innerHTML = `Die Lücke an Slot 0 wird geschlossen: <strong>${n}</strong> Element(e) rücken nach links. Auch das ist O(n).`;
+        note.innerHTML = I18n.t('vis.gapClosed', { n });
       }),
       reset: () => guard(async () => {
         track.querySelectorAll('.cell').forEach((c) => c.remove());
@@ -1187,15 +1187,15 @@ const Visuals = (() => {
       mk(`insert(0, ${fmt(nextValue())})`, ops.insert, () => `insert(0, ${fmt(nextValue())})`),
       mk('pop()', ops.pop),
       mk('pop(0)', ops.pop0),
-      mk('↺ Neu', ops.reset));
+      mk(I18n.t('vis.resetBtn'), ops.reset));
 
     root.append(
       h('div.panel',
-        h('div.panel-title', 'Speicher'),
+        h('div.panel-title', I18n.t('vis.memory')),
         h('div.slots-scroll', track),
-        h('div.slots-meta', cmd, h('span', 'len = ', size), h('span', 'Verschiebungen: ', moves), cost),
+        h('div.slots-meta', cmd, h('span', 'len = ', size), h('span', I18n.t('vis.shifts'), moves), cost),
       ),
-      h('div.panel', h('div.panel-title', 'Operation'), row),
+      h('div.panel', h('div.panel-title', I18n.t('vis.operation')), row),
       note,
     );
     items = cfg.start.map((v, i) => cell(v, i));
@@ -1217,9 +1217,9 @@ const Visuals = (() => {
     const listLog = h('div.op-log');
     const tupLog = h('div.op-log');
     const tupPanel = h('div.panel.panel-immut',
-      h('div.panel-title', 'Tuple ', h('span.badge.no', 'unveränderlich')), tupRepr, tupCells, tupLog);
+      h('div.panel-title', 'Tuple ', h('span.badge.no', I18n.t('vis.immutable'))), tupRepr, tupCells, tupLog);
     const listPanel = h('div.panel.panel-mut',
-      h('div.panel-title', 'Liste ', h('span.badge.ok', 'veränderbar')), listRepr, listCells, listLog);
+      h('div.panel-title', I18n.t('vis.listSpace'), h('span.badge.ok', I18n.t('vis.mutable'))), listRepr, listCells, listLog);
 
     const cells = (arr) => arr.map((v, i) => h('div.vcell', h('small', i), h('b', v)));
     function paint(flashList) {
@@ -1241,11 +1241,11 @@ const Visuals = (() => {
     };
 
     const ops = {
-      set: { cmd: 'x[1] = 99', list: () => { list[1] = 99; return 'ok — Index 1 hat jetzt 99'; },
+      set: { cmd: 'x[1] = 99', list: () => { list[1] = 99; return I18n.t('vis.okSet'); },
              err: "TypeError: 'tuple' object does not support item assignment" },
-      append: { cmd: 'x.append(5)', list: () => { list.push(5); return `ok — Länge ist jetzt ${list.length}`; },
+      append: { cmd: 'x.append(5)', list: () => { list.push(5); return I18n.t('vis.okLength', { n: list.length }); },
                 err: "AttributeError: 'tuple' object has no attribute 'append'" },
-      pop: { cmd: 'x.pop()', list: () => (list.length ? `ok — ${list.pop()} entfernt` : 'IndexError: pop from empty list'),
+      pop: { cmd: 'x.pop()', list: () => (list.length ? I18n.t('vis.okPop', { v: list.pop() }) : 'IndexError: pop from empty list'),
              err: "AttributeError: 'tuple' object has no attribute 'pop'" },
     };
 
@@ -1260,12 +1260,12 @@ const Visuals = (() => {
         blocked();
       },
     }, o.label));
-    buttons.push(h('button.btn.btn-ghost', { onclick: () => { list = [...cfg.values]; listLog.replaceChildren(); tupLog.replaceChildren(); paint(true); } }, '↺ Neu'));
+    buttons.push(h('button.btn.btn-ghost', { onclick: () => { list = [...cfg.values]; listLog.replaceChildren(); tupLog.replaceChildren(); paint(true); } }, I18n.t('vis.resetBtn')));
 
     root.append(
-      h('div.panel', h('div.panel-title', 'Dieselbe Operation auf beide anwenden'), h('div.chip-row', buttons)),
+      h('div.panel', h('div.panel-title', I18n.t('vis.sameOpBoth')), h('div.chip-row', buttons)),
       h('div.scene-grid', listPanel, tupPanel),
-      h('p.step-note', 'Tuples sind <strong>manipulationssicher</strong>: Es gibt keine Methode, die sie verändert. Willst du einen anderen Wert, baust du ein <em>neues</em> Tuple.'),
+      h('p.step-note', I18n.t('vis.tupleNote')),
     );
     root.querySelector('.panel').classList.add('mb');
     paint();
@@ -1277,7 +1277,7 @@ const Visuals = (() => {
   scenes.unpack = (root, cfg, ctx) => {
     const layer = h('div.fly-layer');
     const values = cfg.values;
-    const options = [{ id: 2, label: '2 Variablen' }, { id: 3, label: '3 Variablen' }, { id: 4, label: '4 Variablen' }, { id: '*', label: 'lat, *rest' }];
+    const options = [{ id: 2, label: I18n.t('vis.n2vars') }, { id: 3, label: I18n.t('vis.n3vars') }, { id: 4, label: I18n.t('vis.n4vars') }, { id: '*', label: 'lat, *rest' }];
     let current = 3;
     const optRow = h('div.scene-tabs');
     const tupRow = h('div.vals');
@@ -1308,7 +1308,7 @@ const Visuals = (() => {
         const msg = names.length < values.length
           ? `ValueError: too many values to unpack (expected ${names.length})`
           : `ValueError: not enough values to unpack (expected ${names.length}, got ${values.length})`;
-        result.append(h('div.err', msg), h('div.dim', names.length < values.length ? 'Zu wenige Variablen: ein Wert bliebe übrig.' : 'Zu viele Variablen: ein Fach bliebe leer.'));
+        result.append(h('div.err', msg), h('div.dim', names.length < values.length ? I18n.t('vis.tooFew') : I18n.t('vis.tooMany')));
         tupRow.animate([{ translate: '-8px 0' }, { translate: '8px 0' }, { translate: '0 0' }], { duration: 320 });
         boxes.forEach((b) => b.classList.add('is-err'));
         return;
@@ -1322,14 +1322,14 @@ const Visuals = (() => {
         boxes[i].classList.add('is-ok');
       }
       result.append(h('div', names.map((n, i) => `${n} = ${assigned[i]}`).join('\n')),
-        h('div.dim', star ? '*rest sammelt alle übrigen Werte in einer Liste.' : 'Anzahl der Variablen = Anzahl der Elemente: alles passt.'));
+        h('div.dim', star ? I18n.t('vis.restNote') : I18n.t('vis.countOk')));
     }
 
     root.append(
       optRow,
-      h('div.panel', h('div.panel-title', 'position (Tuple)'), tupRow, h('div.panel-title.mt', 'Variablen'), targets),
+      h('div.panel', h('div.panel-title', I18n.t('vis.positionTuple')), tupRow, h('div.panel-title.mt', I18n.t('vis.variables')), targets),
       h('div.panel', h('div.panel-title', 'Code'), code),
-      h('div.panel', h('div.panel-title', 'Ergebnis'), result),
+      h('div.panel', h('div.panel-title', I18n.t('vis.result')), result),
       layer,
     );
     paintOptions();
@@ -1352,7 +1352,7 @@ const Visuals = (() => {
     const topTag = h('span.top-tag', '◀ TOP');
     well.append(topTag);
     const repr = h('code.repr');
-    const note = h('p.step-note', 'Du kommst nur an das, was oben liegt.');
+    const note = h('p.step-note', I18n.t('vis.stackOnlyTop'));
 
     const plate = (label, i) => {
       const el = h('div.plate', label);
@@ -1376,25 +1376,25 @@ const Visuals = (() => {
 
     const ops = {
       push: () => guard(async () => {
-        if (items.length >= cap) { note.textContent = 'Der Stapel ist voll (Demo-Grenze).'; return; }
+        if (items.length >= cap) { note.textContent = I18n.t('vis.stackFull'); return; }
         const label = cfg.names[next++ % cfg.names.length];
         const p = plate(label, items.length);
         items.push(p);
         p.el.animate([{ opacity: 0, translate: '0 -90px' }, { opacity: 1, translate: '0 0' }], { duration: 420, easing: 'cubic-bezier(.3,1.3,.5,1)' });
-        note.innerHTML = `<code>push</code>: <strong>${label}</strong> landet ganz oben.`;
+        note.innerHTML = I18n.t('vis.pushTop', { label });
         paint();
         await sleep(300);
       }),
       pop: () => guard(async () => {
-        if (!items.length) { note.innerHTML = '<span class="err-text">IndexError: pop from empty list</span> — ein leerer Stack hat nichts zum Entnehmen.'; return; }
+        if (!items.length) { note.innerHTML = I18n.t('vis.popEmptyStack'); return; }
         const p = items.pop();
-        note.innerHTML = `<code>pop</code>: <strong>${p.label}</strong> wird von oben heruntergenommen und zurückgegeben.`;
+        note.innerHTML = I18n.t('vis.popTop', { label: p.label });
         paint();
         await p.el.animate([{ opacity: 1, translate: '0 0' }, { opacity: 0, translate: '0 -90px' }], { duration: 380, fill: 'forwards' }).finished.catch(() => {});
         p.el.remove();
       }),
       peek: () => guard(async () => {
-        if (!items.length) { note.textContent = 'Der Stapel ist leer — es gibt nichts anzuschauen.'; return; }
+        if (!items.length) { note.textContent = I18n.t('vis.stackEmptyPeek'); return; }
         const p = items[items.length - 1];
         note.innerHTML = `<code>stack[-1]</code> schaut nur drauf: <strong>${p.label}</strong>. Der Teller bleibt liegen.`;
         p.el.classList.add('is-peek');
@@ -1402,11 +1402,11 @@ const Visuals = (() => {
         p.el.classList.remove('is-peek');
       }),
       bottom: () => guard(async () => {
-        if (!items.length) { note.textContent = 'Der Stapel ist leer.'; return; }
+        if (!items.length) { note.textContent = I18n.t('vis.stackEmpty'); return; }
         const p = items[0];
         p.el.animate([{ translate: '-8px 0' }, { translate: '8px 0' }, { translate: '-5px 0' }, { translate: '0 0' }], { duration: 400 });
         p.el.classList.add('is-blocked');
-        note.innerHTML = `<code>stack.pop(0)</code> würde unten ziehen — das ist <strong>kein Stack</strong> mehr. Alles darüber müsste nachrutschen. LIFO erlaubt nur den Zugriff oben.`;
+        note.innerHTML = I18n.t('vis.popZero');
         await sleep(500);
         p.el.classList.remove('is-blocked');
       }),
@@ -1414,23 +1414,23 @@ const Visuals = (() => {
         well.querySelectorAll('.plate').forEach((e) => e.remove());
         items = cfg.start.map((l, i) => plate(l, i));
         next = cfg.start.length;
-        note.textContent = 'Du kommst nur an das, was oben liegt.';
+        note.textContent = I18n.t('vis.stackOnlyTop');
         paint();
       }),
     };
 
     root.append(
       h('div.scene-grid',
-        h('div.panel', h('div.panel-title', 'Stapel'), well),
+        h('div.panel', h('div.panel-title', I18n.t('vis.stackPlain')), well),
         h('div.panel',
-          h('div.panel-title', 'Operationen'),
+          h('div.panel-title', I18n.t('vis.operations')),
           h('div.chip-row',
             h('button.btn.btn-primary', { onclick: ops.push }, 'push'),
             h('button.btn.btn-ghost', { onclick: ops.pop }, 'pop'),
             h('button.btn.btn-ghost', { onclick: ops.peek }, 'peek'),
-            h('button.btn.btn-ghost', { onclick: ops.bottom }, 'unten ziehen?'),
-            h('button.btn.btn-ghost', { onclick: ops.reset }, '↺ Neu')),
-          h('div.panel-title.mt', 'Liste dahinter'), repr,
+            h('button.btn.btn-ghost', { onclick: ops.bottom }, I18n.t('vis.pullBottom')),
+            h('button.btn.btn-ghost', { onclick: ops.reset }, I18n.t('vis.resetBtn'))),
+          h('div.panel-title.mt', I18n.t('vis.listBehind')), repr,
           h('ul.legend.mt',
             h('li', h('code', 'push'), ' = ', h('code', 'liste.append(x)')),
             h('li', h('code', 'pop'), ' = ', h('code', 'liste.pop()')),
@@ -1450,21 +1450,21 @@ const Visuals = (() => {
     let stack = [];
     const textEl = h('div.editor-text');
     const stackEl = h('div.stack');
-    const note = h('p.step-note', 'Jede Aktion wird auf den Stack gelegt. Strg+Z holt die oberste wieder herunter.');
+    const note = h('p.step-note', I18n.t('vis.undoNote'));
     const repr = h('code.repr');
 
     function paint(animateLast) {
       textEl.replaceChildren(...stack.map((a, i) => h('span.word' + (animateLast && i === stack.length - 1 ? '.is-new' : ''), a.text + ' ')), h('span.caret'));
       stackEl.replaceChildren(...stack.map((a, i) => h('div.frame' + (i === stack.length - 1 ? '.is-top' : ''), h('div.frame-name', a.label))));
       repr.textContent = 'undo_stack = [' + stack.map((a) => `"${a.label}"`).join(', ') + ']';
-      if (!stack.length) stackEl.append(h('span.dim.empty', 'leer'));
+      if (!stack.length) stackEl.append(h('span.dim.empty', I18n.t('vis.empty')));
     }
 
     const actionBtns = cfg.actions.map((a) => h('button.btn.btn-ghost', {
       onclick() {
         ctx.touch();
         stack.push(a);
-        note.innerHTML = `<code>undo_stack.append("${a.label}")</code> — die Aktion liegt jetzt oben auf dem Stack.`;
+        note.innerHTML = I18n.t('vis.undoAppend', { label: a.label });
         paint(true);
       },
     }, a.label));
@@ -1473,19 +1473,19 @@ const Visuals = (() => {
       onclick() {
         ctx.touch();
         if (!stack.length) {
-          note.innerHTML = 'Stack leer: <span class="err-text">pop() würde einen IndexError auslösen</span>. Darum prüft ein echter Editor vorher, ob etwas da ist.';
+          note.innerHTML = I18n.t('vis.stackEmptyPop');
           return;
         }
         const a = stack.pop();
-        note.innerHTML = `<code>undo_stack.pop()</code> → <strong>${a.label}</strong>. Die zuletzt gemachte Aktion wird als Erste rückgängig gemacht (LIFO).`;
+        note.innerHTML = I18n.t('vis.undoPop', { label: a.label });
         paint(false);
       },
-    }, '↶ Strg+Z');
+    }, '↶ ' + I18n.t('kbd.ctrl') + '+Z');
 
     root.append(
       h('div.scene-grid',
-        h('div.panel', h('div.panel-title', 'Editor'), textEl, h('div.panel-title.mt', 'Aktion ausführen'), h('div.chip-row', actionBtns, undo)),
-        h('div.panel', h('div.panel-title', 'undo_stack'), stackEl, h('div.panel-title.mt', 'Liste'), repr),
+        h('div.panel', h('div.panel-title', 'Editor'), textEl, h('div.panel-title.mt', I18n.t('vis.runAction')), h('div.chip-row', actionBtns, undo)),
+        h('div.panel', h('div.panel-title', 'undo_stack'), stackEl, h('div.panel-title.mt', I18n.t('vis.list')), repr),
       ),
       note,
     );
@@ -1509,15 +1509,15 @@ const Visuals = (() => {
     let tick = 0;
 
     const track = h('div.q-track', { style: { width: DESK + cap * (W + GAP) + 'px' } },
-      h('div.q-desk', h('strong', 'Support'), h('small', 'Schalter')));
+      h('div.q-desk', h('strong', 'Support'), h('small', I18n.t('vis.queueDesk'))));
     const front = h('span.q-mark.q-front', 'FRONT');
     const back = h('span.q-mark.q-back', 'BACK');
     track.append(front, back);
     const repr = h('code.repr');
     const stats = h('div.slots-meta');
     const doneEl = h('div.q-done');
-    const note = h('p.step-note', 'Neue Tickets stellen sich hinten an. Bearbeitet wird immer das vorderste.');
-    const autoBtn = h('button.btn.btn-ghost', { onclick: toggleAuto }, 'Auto-Betrieb');
+    const note = h('p.step-note', I18n.t('vis.queueNote'));
+    const autoBtn = h('button.btn.btn-ghost', { onclick: toggleAuto }, I18n.t('vis.autoRun'));
 
     const cell = (label, i) => {
       const el = h('div.qcell', label);
@@ -1527,8 +1527,8 @@ const Visuals = (() => {
     };
     function paint() {
       repr.textContent = 'warteschlange = [' + items.map((t) => `"${t.label}"`).join(', ') + ']';
-      stats.replaceChildren(h('span', 'wartend: ', h('strong', items.length)), h('span', 'bearbeitet: ', h('strong', done.length)));
-      doneEl.textContent = done.length ? 'Bearbeitungsreihenfolge: ' + done.join(' → ') : 'noch nichts bearbeitet';
+      stats.replaceChildren(h('span', I18n.t('vis.queueWaiting'), h('strong', items.length)), h('span', I18n.t('vis.queueProcessed'), h('strong', done.length)));
+      doneEl.textContent = done.length ? I18n.t('vis.queueOrder') + done.join(' → ') : I18n.t('vis.queueNone');
       front.style.display = back.style.display = items.length ? '' : 'none';
       front.style.transform = x(0);
       back.style.transform = x(Math.max(0, items.length - 1));
@@ -1538,28 +1538,28 @@ const Visuals = (() => {
 
     async function enqueue() {
       if (busy) return;
-      if (items.length >= cap) { note.textContent = 'Die Schlange ist voll (Demo-Grenze).'; return; }
+      if (items.length >= cap) { note.textContent = I18n.t('vis.queueFull'); return; }
       busy = true;
       ctx.touch();
       const l = label();
       const c = cell(l, items.length);
       items.push(c);
       c.el.animate([{ opacity: 0, translate: '60px 0' }, { opacity: 1, translate: '0 0' }], { duration: 420, easing: 'cubic-bezier(.2,1.2,.4,1)' });
-      note.innerHTML = `<code>warteschlange.append("${l}")</code> — das Ticket stellt sich <strong>hinten</strong> an.`;
+      note.innerHTML = I18n.t('vis.queueAppend', { l });
       paint();
       await sleep(320);
       busy = false;
     }
     async function dequeue() {
       if (busy) return;
-      if (!items.length) { note.innerHTML = '<span class="err-text">IndexError: pop from empty list</span> — vor <code>pop(0)</code> prüfen, ob Tickets warten.'; return; }
+      if (!items.length) { note.innerHTML = I18n.t('vis.popEmptyQueue'); return; }
       busy = true;
       ctx.touch();
       const first = items.shift();
       done.push(first.label);
       first.el.style.transform = `translateX(18px)`;
       first.el.classList.add('is-serving');
-      note.innerHTML = `<code>warteschlange.pop(0)</code> → <strong>${first.label}</strong> wird vorn bearbeitet; alle anderen rücken nach.`;
+      note.innerHTML = I18n.t('vis.queuePop', { label: first.label });
       items.forEach((t, i) => (t.el.style.transform = x(i)));
       paint();
       await sleep(520);
@@ -1570,11 +1570,11 @@ const Visuals = (() => {
       if (timer) {
         clearInterval(timer);
         timer = null;
-        autoBtn.textContent = 'Auto-Betrieb';
+        autoBtn.textContent = I18n.t('vis.autoRun');
         autoBtn.classList.remove('is-on');
         return;
       }
-      autoBtn.textContent = 'Stopp';
+      autoBtn.textContent = I18n.t('vis.stopBtn');
       autoBtn.classList.add('is-on');
       timer = setInterval(() => (tick++ % 3 === 2 ? dequeue() : enqueue()), 1100);
     }
@@ -1585,20 +1585,20 @@ const Visuals = (() => {
       done = [];
       busy = false;
       items = Array.from({ length: cfg.start }, (_, i) => cell(label(), i));
-      note.textContent = 'Neue Tickets stellen sich hinten an. Bearbeitet wird immer das vorderste.';
+      note.textContent = I18n.t('vis.queueNote');
       paint();
     }
 
     root.append(
-      h('div.panel', h('div.panel-title', 'Warteschlange'), h('div.slots-scroll.q-scroll', track)),
+      h('div.panel', h('div.panel-title', I18n.t('vis.queueMemo')), h('div.slots-scroll.q-scroll', track)),
       h('div.panel', h('div.chip-row',
-        h('button.btn.btn-primary', { onclick: enqueue }, '+ Neues Ticket (append)'),
-        h('button.btn.btn-ghost', { onclick: dequeue }, 'Nächstes bearbeiten (pop(0))'),
+        h('button.btn.btn-primary', { onclick: enqueue }, I18n.t('vis.newTicket')),
+        h('button.btn.btn-ghost', { onclick: dequeue }, I18n.t('vis.nextTicket')),
         autoBtn,
-        h('button.btn.btn-ghost', { onclick: reset }, '↺ Neu')),
-        h('div.panel-title.mt', 'Liste dahinter'), repr, h('div.mt', stats), h('div.q-done-wrap', doneEl)),
+        h('button.btn.btn-ghost', { onclick: reset }, I18n.t('vis.resetBtn'))),
+        h('div.panel-title.mt', I18n.t('vis.listBehind')), repr, h('div.mt', stats), h('div.q-done-wrap', doneEl)),
       note,
-      h('p.muted.small', 'Hinweis: Bei Python-Listen muss <code>pop(0)</code> alle übrigen Elemente nachrücken lassen (O(n)). Für große Warteschlangen nutzt man <code>collections.deque</code> mit <code>popleft()</code>.'),
+      h('p.muted.small', I18n.t('vis.queueHint')),
     );
     reset();
     return { destroy() { if (timer) clearInterval(timer); } };
@@ -1607,9 +1607,11 @@ const Visuals = (() => {
   /* ------------------------------------------------- Szene: Linked List */
 
   scenes.linkedNodes = (root, cfg, ctx) => {
-    const SLOTS = [[4, 12], [32, 62], [62, 10], [74, 62]]; // Position der Knoten im "Speicher" (in %)
-    const NEW_SLOT = [34, 8];
-    const ADDRS = ['0x1A40', '0x2F88', '0x3C10', '0x4B24'];
+    // Die Kette liegt in einer Zeile (Pfeile kreuzen sich nie), der neue Knoten darunter im "freien Speicher".
+    const SLOTS = [[3, 14], [28, 14], [53, 14], [78, 14]]; // Position der Knoten (in %)
+    const NEW_Y = 60;
+    const NODE_W = 17.5; // Knotenbreite in % der Fläche
+    const ADDRS = ['0x3C10', '0x1A40', '0x4B24', '0x2F88']; // bewusst nicht aufsteigend: Adresse ≠ Reihenfolge
     const NEW_ADDR = '0x5D70';
     let sel = 1;
     let nodes = [];
@@ -1626,7 +1628,7 @@ const Visuals = (() => {
     arrows.append(defs);
     area.append(arrows);
     const chain = h('code.repr');
-    const note = h('p.step-note', 'Wähle den Vorgänger und drücke ▶ Schritt.');
+    const note = h('p.step-note', I18n.t('vis.chooseLastNode'));
     const lineEls = [
       'neu = Node("Neuer Song")',
       'neu.next = vorgaenger.next',
@@ -1651,17 +1653,27 @@ const Visuals = (() => {
         if (!n.next) return;
         const s = n.nxt.getBoundingClientRect();
         const e = n.next.el.getBoundingClientRect();
-        const sx = s.right - A.left;
-        const sy = s.top + s.height / 2 - A.top;
-        const ex = e.left - A.left - 2;
-        const ey = e.top + e.height / 2 - A.top;
-        const dx = Math.max(50, Math.abs(ex - sx) / 2);
-        const p = svg('path', {
-          class: 'link' + (hot.has(n) ? ' hot' : ''),
-          d: `M${sx},${sy} C${sx + dx},${sy} ${ex - dx},${ey} ${ex},${ey}`,
-          'marker-end': 'url(#ah)',
-        });
-        arrows.append(p);
+        const body = n.next.el.querySelector('.node-body').getBoundingClientRect();
+        const sameRow = Math.abs(s.top - e.top) < 40;
+        let d;
+        if (sameRow) {
+          const sx = s.right - A.left;
+          const sy = s.top + s.height / 2 - A.top;
+          const ex = e.left - A.left - 2;
+          const dx = Math.max(24, Math.abs(ex - sx) / 2);
+          d = `M${sx},${sy} C${sx + dx},${sy} ${ex - dx},${sy} ${ex},${sy}`;
+        } else {
+          // Zeile wechseln: senkrecht aus dem next-Feld heraus, von oben bzw. unten in den Zielknoten hinein
+          const down = e.top > s.top;
+          const sx = s.left + s.width / 2 - A.left;
+          const sy = (down ? s.bottom : s.top) - A.top;
+          const ex = body.left + body.width / 2 - A.left;
+          const ey = (down ? body.top - 18 : body.bottom + 2) - A.top;
+          const dy = Math.max(24, Math.abs(ey - sy) / 2);
+          const k = down ? 1 : -1;
+          d = `M${sx},${sy} C${sx},${sy + k * dy} ${ex},${ey - k * dy} ${ex},${ey}`;
+        }
+        arrows.append(svg('path', { class: 'link' + (hot.has(n) ? ' hot' : ''), d, 'marker-end': 'url(#ah)' }));
       });
     }
     function chainText() {
@@ -1680,7 +1692,7 @@ const Visuals = (() => {
       requestAnimationFrame(drawArrows);
     }
     function paintSel() {
-      selRow.replaceChildren(h('span.panel-title.inline', 'Einfügen nach:'), ...cfg.songs.map((t, i) =>
+      selRow.replaceChildren(h('span.panel-title.inline', I18n.t('vis.insertAfter')), ...cfg.songs.map((t, i) =>
         h('button.pill' + (i === sel ? '.is-active' : ''), { onclick: () => { sel = i; paintSel(); ctl.reset(); } }, t)));
     }
 
@@ -1691,29 +1703,32 @@ const Visuals = (() => {
         const pred = nodes[sel];
         lineEls.forEach((l, j) => l.classList.toggle('is-active', j === i));
         if (i === 0) {
-          newNode = makeNode(cfg.newSong, NEW_ADDR, NEW_SLOT);
+          // mittig zwischen Vorgänger und Nachfolger, beim letzten Knoten direkt darunter
+          const px = SLOTS[sel][0];
+          const nx = Math.min(px + (SLOTS[1][0] - SLOTS[0][0]) / 2, 100 - NODE_W - 2);
+          newNode = makeNode(cfg.newSong, NEW_ADDR, [nx, NEW_Y]);
           newNode.el.classList.add('is-new');
-          newNode.el.animate([{ opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1 }], { duration: 400, easing: 'cubic-bezier(.2,1.3,.4,1)' });
-          note.innerHTML = `Ein neuer Knoten entsteht irgendwo im freien Speicher (<code>${NEW_ADDR}</code>). Noch zeigt er auf <code>None</code>, und <strong>die Kette ist unverändert</strong>.`;
+          newNode.el.animate([{ opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1 }], { duration: 400, easing: 'cubic-bezier(.2,1.3,.4,1)' }).onfinish = drawArrows;
+          note.innerHTML = I18n.t('vis.newNode', { addr: NEW_ADDR });
         } else if (i === 1) {
           newNode.next = pred.next;
           hot = new Set([newNode]);
           note.innerHTML = pred.next
-            ? `Der neue Knoten übernimmt den Zeiger des Vorgängers: Er zeigt jetzt auf <strong>${pred.next.titel}</strong>. Erst <em>danach</em> darf der Vorgänger umgebogen werden — sonst ginge der Rest der Kette verloren.`
-            : 'Der Vorgänger ist der letzte Knoten, sein <code>next</code> ist <code>None</code>. Der neue Knoten übernimmt das und wird das neue Kettenende.';
+            ? I18n.t('vis.takesOver', { t: pred.next.titel })
+            : I18n.t('vis.lastPred');
         } else {
           pred.next = newNode;
           hot = new Set([pred]);
           const idx = nodes.indexOf(pred);
           nodes.splice(idx + 1, 0, newNode);
           chainText();
-          note.innerHTML = `Der Zeiger von <strong>${pred.titel}</strong> zeigt jetzt auf den neuen Knoten. <strong>2 Zeiger geändert, 0 Elemente verschoben</strong> — alle Knoten liegen noch an ihrer Adresse. Eine Python-Liste müsste bei <code>insert</code> alle folgenden Elemente nach rechts rücken.`;
+          note.innerHTML = I18n.t('vis.pointerMoved', { t: pred.titel });
         }
         drawArrows();
       },
       onReset() {
         lineEls.forEach((l) => l.classList.remove('is-active'));
-        note.textContent = 'Wähle den Vorgänger und drücke ▶ Schritt.';
+        note.textContent = I18n.t('vis.chooseLastNode');
         build();
       },
     });
@@ -1723,8 +1738,8 @@ const Visuals = (() => {
 
     root.append(
       h('div.panel', selRow),
-      h('div.panel', h('div.panel-title', 'Speicher (Knoten mit Adresse und next-Zeiger)'), h('div.mem-scroll', area), h('div.panel-title.mt', 'Kette'), chain),
-      h('div.panel.panel-code', h('div.panel-title', 'Zeiger umbiegen'), h('div.code-block', lineEls)),
+      h('div.panel', h('div.panel-title', I18n.t('vis.memNodes')), h('div.mem-scroll', area), h('div.panel-title.mt', I18n.t('vis.chain')), chain),
+      h('div.panel.panel-code', h('div.panel-title', I18n.t('vis.repoint')), h('div.code-block', lineEls)),
       note, ctl.el,
     );
     paintSel();
@@ -1745,9 +1760,9 @@ const Visuals = (() => {
       const sum = codes.reduce((a, b) => a + b, 0);
       return { codes, sum, idx: sum % N };
     };
-    const input = h('input.field', { type: 'text', placeholder: 'Schlüssel, z. B. Maus', 'aria-label': 'Schlüssel', maxlength: 14 });
-    const calc = h('div.calc', h('span.dim', 'Wähle oder tippe einen Schlüssel.'));
-    const note = h('p.step-note', 'Eine Hash-Funktion macht aus dem Schlüssel eine Zahl — die bestimmt den Bucket. So findet <code>d["Maus"]</code> den Eintrag ohne Suchen.');
+    const input = h('input.field', { type: 'text', placeholder: I18n.t('vis.keyPlaceholder'), 'aria-label': I18n.t('vis.key'), maxlength: 14 });
+    const calc = h('div.calc', h('span.dim', I18n.t('vis.pickKey')));
+    const note = h('p.step-note', I18n.t('vis.hashNote'));
     const rows = buckets.map((_, i) => {
       const items = h('div.bk-items');
       const row = h('div.bucket', h('span.bk-idx', i), items);
@@ -1764,7 +1779,7 @@ const Visuals = (() => {
     const showCalc = (key, hs) => {
       calc.replaceChildren(
         h('div', h('code', `hash("${key}")`), ' = ', hs.codes.join(' + '), ' = ', h('strong', hs.sum)),
-        h('div', h('strong', hs.sum), ` % ${N} = `, h('strong.accent', hs.idx), h('span.dim', `   → Bucket ${hs.idx}`)));
+        h('div', h('strong', hs.sum), ` % ${N} = `, h('strong.accent', hs.idx), h('span.dim', I18n.t('vis.bucketArrow', { idx: hs.idx }))));
     };
     const clearMarks = () => rows.forEach((r) => r.row.classList.remove('is-hit', 'is-collide', 'is-miss'));
     const getKey = () => input.value.trim();
@@ -1783,15 +1798,15 @@ const Visuals = (() => {
       target.classList.add('is-hit');
       await flyChip(layer, input, target, key, 'str');
       if (existing) {
-        note.innerHTML = `Der Schlüssel <strong>${key}</strong> ist schon im Bucket ${hs.idx}: Der Wert wird <strong>überschrieben</strong>, kein neuer Eintrag.`;
+        note.innerHTML = I18n.t('vis.keyOverwrite', { key, idx: hs.idx });
       } else {
         const collision = bucket.length > 0;
         bucket.push({ key, value });
         if (collision) {
           target.classList.add('is-collide');
-          note.innerHTML = `<strong>Kollision!</strong> Bucket ${hs.idx} gehört schon <strong>${bucket[0].key}</strong>. Beide Einträge werden im selben Bucket verkettet (Chaining). Python löst das intern ähnlich, nur geschickter.`;
+          note.innerHTML = I18n.t('vis.collision', { idx: hs.idx, k: bucket[0].key });
         } else {
-          note.innerHTML = `<code>preise["${key}"] = ${value}</code> → Der Eintrag landet direkt in Bucket ${hs.idx}.`;
+          note.innerHTML = I18n.t('vis.storeNote', { key, value, idx: hs.idx });
         }
       }
       paint();
@@ -1807,23 +1822,23 @@ const Visuals = (() => {
       const hit = buckets[hs.idx].find((e) => e.key === key);
       row.classList.add(hit ? 'is-hit' : 'is-miss');
       note.innerHTML = hit
-        ? `<code>preise["${key}"]</code> → Hash berechnen, direkt zu Bucket ${hs.idx}, Wert <strong>${hit.value}</strong> gefunden. Kein Durchsuchen aller Einträge: <strong>O(1)</strong>.`
-        : `Bucket ${hs.idx} enthält <code>"${key}"</code> nicht → <span class="err-text">KeyError: '${key}'</span> (mit <code>.get()</code> bekämst du <code>None</code>).`;
+        ? I18n.t('vis.getFound', { key, idx: hs.idx, v: hit.value })
+        : I18n.t('vis.getMissing', { idx: hs.idx, key });
     }
 
     const keyChips = h('div.chip-row', cfg.keys.map((k) => h('button.pill', { onclick: () => { input.value = k; showCalc(k, hashOf(k)); } }, k)));
     root.append(
       h('div.scene-grid',
         h('div.panel',
-          h('div.panel-title', 'Schlüssel'), keyChips,
+          h('div.panel-title', I18n.t('vis.key')), keyChips,
           h('div.row-inline', input,
             h('button.btn.btn-primary', { onclick: () => put(getKey()) }, 'put'),
             h('button.btn.btn-ghost', { onclick: () => get(getKey()) }, 'get')),
-          h('div.panel-title', 'Hash-Funktion (vereinfacht)'), calc,
+          h('div.panel-title', I18n.t('vis.hashFn')), calc,
           h('div.panel-title.mt', 'Dictionary'), repr,
-          h('button.btn.btn-ghost.mt', { onclick: () => { buckets.forEach((b) => (b.length = 0)); clearMarks(); paint(); } }, '↺ Leeren'),
+          h('button.btn.btn-ghost.mt', { onclick: () => { buckets.forEach((b) => (b.length = 0)); clearMarks(); paint(); } }, I18n.t('vis.clear')),
         ),
-        h('div.panel', h('div.panel-title', `Hash-Tabelle (${N} Buckets)`), tableEl),
+        h('div.panel', h('div.panel-title', I18n.t('vis.hashTable', { n: N })), tableEl),
       ),
       note,
       layer,
@@ -1849,15 +1864,15 @@ const Visuals = (() => {
       b: only(B, A),
     };
     const ops = [
-      { id: 'and',  code: 'A & B', label: 'Schnittmenge', calc: () => zones.both,                              regions: [['B', 'clipA']] },
-      { id: 'or',   code: 'A | B', label: 'Vereinigung',  calc: () => [...zones.a, ...zones.both, ...zones.b], regions: [['A'], ['B']] },
-      { id: 'a-b',  code: 'A - B', label: 'Differenz A \\ B', calc: () => zones.a,                            regions: [['A', 'notB']] },
-      { id: 'b-a',  code: 'B - A', label: 'Differenz B \\ A', calc: () => zones.b,                            regions: [['B', 'notA']] },
-      { id: 'xor',  code: 'A ^ B', label: 'Symmetrische Differenz', calc: () => [...zones.a, ...zones.b],     regions: [['A', 'notB'], ['B', 'notA']] },
+      { id: 'and',  code: 'A & B', label: I18n.t('vis.intersection'), calc: () => zones.both,                              regions: [['B', 'clipA']] },
+      { id: 'or',   code: 'A | B', label: I18n.t('vis.union'),  calc: () => [...zones.a, ...zones.both, ...zones.b], regions: [['A'], ['B']] },
+      { id: 'a-b',  code: 'A - B', label: I18n.t('vis.diffAB'), calc: () => zones.a,                            regions: [['A', 'notB']] },
+      { id: 'b-a',  code: 'B - A', label: I18n.t('vis.diffBA'), calc: () => zones.b,                            regions: [['B', 'notA']] },
+      { id: 'xor',  code: 'A ^ B', label: I18n.t('vis.symDiff'), calc: () => [...zones.a, ...zones.b],     regions: [['A', 'notB'], ['B', 'notA']] },
     ];
     let current = null;
 
-    const s = svg('svg', { viewBox: '0 0 520 300', class: 'venn', role: 'img', 'aria-label': 'Venn-Diagramm der Mengen A und B' });
+    const s = svg('svg', { viewBox: '0 0 520 300', class: 'venn', role: 'img', 'aria-label': I18n.t('vis.venn') });
     const defs = svg('defs');
     const clip = svg('clipPath', { id: uid + 'clipA' });
     clip.append(svg('circle', { cx: CA[0], cy: CA[1], r: R }));
@@ -1893,7 +1908,7 @@ const Visuals = (() => {
       texts.forEach((t) => t.classList.remove('in'));
       if (!current) {
         code.innerHTML = highlight(`A = ${fmt(A)}\nB = ${fmt(B)}`);
-        result.replaceChildren(h('span.dim', 'Klicke eine Operation, um das Ergebnis zu sehen.'));
+        result.replaceChildren(h('span.dim', I18n.t('vis.clickOp')));
       } else {
         current.regions.forEach(([c, m]) => {
           const el = circle(c === 'A' ? CA : CB, 'venn-fill');
@@ -1904,19 +1919,19 @@ const Visuals = (() => {
         const res = current.calc();
         res.forEach((ip) => texts.get(ip).classList.add('in'));
         code.innerHTML = highlight(`A = ${fmt(A)}\nB = ${fmt(B)}\n\n${current.code}`);
-        result.replaceChildren(h('div', fmt(res) + (res.length ? '' : ' → set()')), h('div.dim', `${current.label}: ${res.length} Element(e). Die Reihenfolge in einem Set ist nicht festgelegt.`));
+        result.replaceChildren(h('div', fmt(res) + (res.length ? '' : ' → set()')), h('div.dim', I18n.t('vis.setResult', { label: current.label, n: res.length })));
       }
       btns.replaceChildren(...ops.map((o) =>
         h('button.pill' + (o === current ? '.is-active' : ''), { onclick: () => { current = o; ctx.touch(); paint(); } }, h('code', o.code), ' ', o.label)));
     }
 
     root.append(
-      h('div.panel', h('div.panel-title', 'Operation'), btns),
+      h('div.panel', h('div.panel-title', I18n.t('vis.operation')), btns),
       h('div.scene-grid',
-        h('div.panel', h('div.panel-title', 'Mengen A und B'), s),
-        h('div.panel', h('div.panel-title', 'Code'), code, h('div.panel-title.mt', 'Ergebnis'), result),
+        h('div.panel', h('div.panel-title', I18n.t('vis.setsAB')), s),
+        h('div.panel', h('div.panel-title', 'Code'), code, h('div.panel-title.mt', I18n.t('vis.result')), result),
       ),
-      h('p.step-note', 'Faustregel: <code>&amp;</code> = in <em>beiden</em>, <code>|</code> = in <em>mindestens einer</em>, <code>-</code> = in der linken, aber <em>nicht</em> in der rechten Menge.'),
+      h('p.step-note', I18n.t('vis.setRule')),
     );
     paint();
     return { destroy() {} };
@@ -1930,7 +1945,7 @@ const Visuals = (() => {
       const isDir = typeof content === 'object';
       rows.push({ name, depth, isDir, size: isDir ? null : content });
       if (isDir) Object.entries(content).forEach(([k, v]) => walk(k, v, depth + 1));
-    })('/ (Wurzel)', cfg.tree, 0);
+    })(I18n.t('vis.rootLabel'), cfg.tree, 0);
 
     const rowEls = rows.map((r) => h('div.tree-row' + (r.isDir ? '.is-dir' : ''), { style: { paddingLeft: 10 + r.depth * 22 + 'px' } },
       h('span.tree-ico', r.isDir ? '▸' : '·'), r.name));
@@ -1938,7 +1953,7 @@ const Visuals = (() => {
     const callPath = h('div.call-path');
     const cntFiles = h('strong', '0');
     const cntDepth = h('strong', '0');
-    const note = h('p.step-note', 'Drücke ▶ Schritt: Die Funktion besucht Eintrag für Eintrag — Ordner lösen einen neuen rekursiven Aufruf aus.');
+    const note = h('p.step-note', I18n.t('vis.recurseNote'));
     const lines = [
       'def dateien_zaehlen(ordner):',
       '    anzahl = 0',
@@ -1968,16 +1983,16 @@ const Visuals = (() => {
         lineEls.forEach((l) => l.classList.remove('is-active'));
         if (r.isDir) {
           lineEls[4].classList.add('is-active');
-          note.innerHTML = `<strong>${r.name}</strong> ist ein Ordner → rekursiver Aufruf <code>dateien_zaehlen(inhalt)</code>. Der Stack wird eine Ebene tiefer (Tiefe ${r.depth + 1}).`;
+          note.innerHTML = I18n.t('vis.isFolder', { name: r.name, d: r.depth + 1 });
         } else {
           files++;
           lineEls[6].classList.add('is-active');
-          note.innerHTML = `<strong>${r.name}</strong> ist eine Datei → <code>anzahl += 1</code>. Kein weiterer Aufruf nötig (<em>Basisfall</em> dieses Zweigs).`;
+          note.innerHTML = I18n.t('vis.isFile', { name: r.name });
         }
         cntFiles.textContent = files;
         cntDepth.textContent = maxDepth;
         callPath.replaceChildren(...path.flatMap((p, k) => [k ? h('span.sep', '→') : null, h('code', k === 0 ? 'dateien_zaehlen(wurzel)' : `dateien_zaehlen(${p})`)]).filter(Boolean));
-        if (i === rows.length - 1) note.innerHTML += ` Fertig: <strong>${files} Dateien</strong>, tiefste Ebene ${maxDepth}.`;
+        if (i === rows.length - 1) note.innerHTML += I18n.t('vis.doneFiles', { files, d: maxDepth });
       },
       onReset() {
         files = 0; maxDepth = 0; path = [];
@@ -1986,15 +2001,15 @@ const Visuals = (() => {
         cntFiles.textContent = '0';
         cntDepth.textContent = '0';
         callPath.replaceChildren();
-        note.textContent = 'Drücke ▶ Schritt: Die Funktion besucht Eintrag für Eintrag — Ordner lösen einen neuen rekursiven Aufruf aus.';
+        note.textContent = I18n.t('vis.recurseNote');
       },
     });
 
     root.append(
       h('div.scene-grid',
-        h('div.panel', h('div.panel-title', 'Ordnerbaum'), treeEl,
-          h('div.slots-meta.mt', h('span', 'Dateien gezählt: ', cntFiles), h('span', 'tiefste Ebene: ', cntDepth)),
-          h('div.panel-title.mt', 'Aufrufkette'), callPath),
+        h('div.panel', h('div.panel-title', I18n.t('vis.folderTreeTitle')), treeEl,
+          h('div.slots-meta.mt', h('span', I18n.t('vis.filesCounted'), cntFiles), h('span', I18n.t('vis.deepest'), cntDepth)),
+          h('div.panel-title.mt', I18n.t('vis.callChain')), callPath),
         h('div.panel.panel-code', h('div.panel-title', 'Code'), h('div.code-block', lineEls)),
       ),
       note, ctl.el,
@@ -2022,20 +2037,20 @@ const Visuals = (() => {
         for (let j = 0; j < n - 1 - i; j++) {
           cmp++;
           ev.push({ t: 'cmp', i: j, j: j + 1, arr: [...a], sortedFrom, stats: [cmp, swaps],
-            note: `Vergleiche <code>${a[j]}</code> und <code>${a[j + 1]}</code>: ${a[j] > a[j + 1] ? 'linker ist größer → tauschen' : 'Reihenfolge stimmt → weiter'}.` });
+            note: I18n.t('vis.compareSort', { x: a[j], y: a[j + 1], res: a[j] > a[j + 1] ? I18n.t('vis.swapLeft') : I18n.t('vis.inOrder') }) });
           if (a[j] > a[j + 1]) {
             [a[j], a[j + 1]] = [a[j + 1], a[j]];
             swaps++;
-            ev.push({ t: 'swap', i: j, j: j + 1, arr: [...a], sortedFrom, stats: [cmp, swaps], note: 'Getauscht: der größere Wert „blubbert“ nach rechts.' });
+            ev.push({ t: 'swap', i: j, j: j + 1, arr: [...a], sortedFrom, stats: [cmp, swaps], note: I18n.t('vis.swapped') });
             swapped = true;
           }
         }
         sortedFrom = n - 1 - i;
         ev.push({ t: 'pass', arr: [...a], sortedFrom, stats: [cmp, swaps],
-          note: swapped ? `Durchlauf ${i + 1} fertig: Der größte Wert sitzt ganz rechts.` : `Durchlauf ${i + 1} ohne Tausch — die Liste ist sortiert, früher Abbruch!` });
+          note: swapped ? I18n.t('vis.passDone', { n: i + 1 }) : I18n.t('vis.passNoSwap', { n: i + 1 }) });
         if (!swapped) { ev[ev.length - 1].sortedFrom = 0; break; }
       }
-      ev.push({ t: 'done', arr: [...a], sortedFrom: 0, stats: [cmp, swaps], note: `<strong>Sortiert.</strong> ${cmp} Vergleiche und ${swaps} Tausche — bei großen Listen wächst das quadratisch (O(n²)).` });
+      ev.push({ t: 'done', arr: [...a], sortedFrom: 0, stats: [cmp, swaps], note: I18n.t('vis.sortedBubble', { c: cmp, s: swaps }) });
       return ev;
     }
     function genMerge() {
@@ -2046,7 +2061,7 @@ const Visuals = (() => {
       (function ms(lo, hi) {
         if (hi - lo < 2) return;
         splits++;
-        ev.push({ t: 'split', lo, hi, arr: [...a], stats: [splits, merges], note: `Teilen: Bereich <code>[${lo}:${hi}]</code> hat ${hi - lo} Elemente und wird halbiert.` });
+        ev.push({ t: 'split', lo, hi, arr: [...a], stats: [splits, merges], note: I18n.t('vis.splitNote', { lo, hi, n: hi - lo }) });
         const mid = (lo + hi) >> 1;
         ms(lo, mid);
         ms(mid, hi);
@@ -2059,9 +2074,9 @@ const Visuals = (() => {
         out.push(...l.slice(i), ...r.slice(j));
         a.splice(lo, hi - lo, ...out);
         merges++;
-        ev.push({ t: 'merge', lo, hi, arr: [...a], stats: [splits, merges], note: `Mischen: Die sortierten Hälften <code>[${l}]</code> und <code>[${r}]</code> werden zu <code>[${out}]</code> zusammengefügt.` });
+        ev.push({ t: 'merge', lo, hi, arr: [...a], stats: [splits, merges], note: I18n.t('vis.mergeNote', { l, r, out }) });
       })(0, n);
-      ev.push({ t: 'done', arr: [...a], lo: 0, hi: n, stats: [splits, merges], note: `<strong>Sortiert.</strong> ${splits} Teilungen, ${merges} Mischvorgänge — nur etwa n·log n Arbeit (O(n log n)).` });
+      ev.push({ t: 'done', arr: [...a], lo: 0, hi: n, stats: [splits, merges], note: I18n.t('vis.sortedMerge', { sp: splits, m: merges }) });
       return ev;
     }
     const gen = () => (events = algo === 'bubble' ? genBubble() : genMerge());
@@ -2091,8 +2106,8 @@ const Visuals = (() => {
       pills.replaceChildren(...[['bubble', 'Bubble Sort'], ['merge', 'Merge Sort']].map(([id, label]) =>
         h('button.pill' + (id === algo ? '.is-active' : ''), { onclick: () => { algo = id; paintPills(); gen(); ctl.setTotal(events.length); ctl.reset(); } }, label)));
       codeBox.innerHTML = highlight(CODE[algo]);
-      label1.textContent = algo === 'bubble' ? 'Vergleiche: ' : 'Teilungen: ';
-      label2.textContent = algo === 'bubble' ? 'Tausche: ' : 'Mischvorgänge: ';
+      label1.textContent = algo === 'bubble' ? I18n.t('vis.comparesLabel') : I18n.t('vis.splitsLabel');
+      label2.textContent = algo === 'bubble' ? I18n.t('vis.swapsLabel') : I18n.t('vis.mergesLabel');
     }
     gen();
 
@@ -2120,7 +2135,7 @@ const Visuals = (() => {
       onReset() {
         paintBars(data);
         stat1.textContent = stat2.textContent = '0';
-        note.textContent = 'Drücke ▶ Schritt oder starte Auto-Play.';
+        note.textContent = I18n.t('vis.pressStepOrAuto');
       },
     });
     ctl.reset();
@@ -2131,7 +2146,7 @@ const Visuals = (() => {
       h('div.panel', h('div.panel-title', 'liste = [' + data.join(', ') + ']'), barsEl,
         h('div.slots-meta', h('span', label1, stat1), h('span', label2, stat2))),
       note, ctl.el,
-      h('div.panel', h('div.panel-title', 'Kernidee'), codeBox),
+      h('div.panel', h('div.panel-title', I18n.t('vis.coreIdea')), codeBox),
     );
     return { destroy: ctl.destroy };
   };
@@ -2152,10 +2167,10 @@ const Visuals = (() => {
     reset();
 
     const view = { path: new Set(), cur: null, found: null, ghost: null, fresh: null };
-    const svgEl = svg('svg', { class: 'bst', role: 'img', 'aria-label': 'Binärer Suchbaum' });
+    const svgEl = svg('svg', { class: 'bst', role: 'img', 'aria-label': I18n.t('vis.bstLabel') });
     const log = h('div.bst-log');
-    const input = h('input.field', { type: 'number', placeholder: 'Zahl', 'aria-label': 'Zahl' });
-    const note = h('p.step-note', 'Wähle ein Beispiel oder tippe eine Zahl, dann „Suchen“ oder „Einfügen“.');
+    const input = h('input.field', { type: 'number', placeholder: I18n.t('vis.number'), 'aria-label': I18n.t('vis.number') });
+    const note = h('p.step-note', I18n.t('vis.bstChoose'));
 
     function layout() {
       const list = [];
@@ -2220,7 +2235,7 @@ const Visuals = (() => {
       if (!node) {
         tree = insertNode(tree, q);
         view.fresh = q; draw();
-        note.textContent = 'Der Baum war leer — der Wert wird zur Wurzel.';
+        note.textContent = I18n.t('vis.treeEmpty');
         return;
       }
       while (node) {
@@ -2231,24 +2246,24 @@ const Visuals = (() => {
         draw();
         if (q === node.v) {
           view.found = node.v; view.cur = null; draw();
-          addLog(`<code>${q} == ${node.v}</code> → ${insert ? 'schon vorhanden (Duplikate werden nicht eingefügt)' : '<strong>gefunden!</strong>'}`);
+          addLog(I18n.t('vis.eqNote', { q, v: node.v, res: insert ? I18n.t('vis.alreadyIn') : I18n.t('vis.found') }));
           note.innerHTML = insert
-            ? `<strong>${q}</strong> steht schon im Baum, es wird nichts eingefügt.`
-            : `<strong>${q}</strong> nach ${steps} Vergleich(en) gefunden — der Baum hat ${layout().list.length} Knoten.`;
+            ? I18n.t('vis.alreadyInTree', { q })
+            : I18n.t('vis.foundAfter', { q, steps, n: layout().list.length });
           return;
         }
         const left = q < node.v;
         const next = left ? node.l : node.r;
-        addLog(`<code>${q} ${left ? '<' : '>'} ${node.v}</code> → nach ${left ? 'links' : 'rechts'}${next ? '' : ' — dort ist <strong>None</strong>'}`);
+        addLog(I18n.t('vis.compareDir', { q, op: left ? '<' : '>', v: node.v, dir: left ? I18n.t('vis.toLeft') : I18n.t('vis.toRight'), tail: next ? '' : I18n.t('vis.isNone') }));
         await sleep2(700);
         if (!next) {
           if (insert) {
             if (left) node.l = { v: q, l: null, r: null }; else node.r = { v: q, l: null, r: null };
             view.cur = null; view.fresh = q; view.path.add(q); draw();
-            note.innerHTML = `<strong>${q}</strong> wird nach ${steps} Vergleich(en) als ${left ? 'linkes' : 'rechtes'} Kind von <strong>${node.v}</strong> eingefügt: <code>${left ? 'links' : 'rechts'} = Knoten(${q})</code>.`;
+            note.innerHTML = I18n.t('vis.insertedAs', { q, steps, side: left ? I18n.t('vis.leftChild') : I18n.t('vis.rightChild'), v: node.v, code: (left ? 'links' : 'rechts') + ' = Knoten(' + q + ')' });
           } else {
             view.cur = null; view.ghost = { parent: node.v, dir: left ? 'l' : 'r' }; draw();
-            note.innerHTML = `Nach ${steps} Vergleich(en) endet der Pfad bei <code>None</code> — <strong>${q}</strong> ist nicht im Baum.`;
+            note.innerHTML = I18n.t('vis.endsNone', { steps, q });
           }
           return;
         }
@@ -2257,20 +2272,20 @@ const Visuals = (() => {
     }
     const run = (insert) => {
       const q = parseInt(input.value, 10);
-      if (Number.isNaN(q)) { note.textContent = 'Bitte eine ganze Zahl eingeben.'; return; }
+      if (Number.isNaN(q)) { note.textContent = I18n.t('vis.enterInt'); return; }
       walk(q, insert);
     };
 
     root.append(
       h('div.panel',
-        h('div.panel-title', 'Beispiele'),
+        h('div.panel-title', I18n.t('vis.examples')),
         h('div.chip-row', cfg.examples.map((v) => h('button.pill', { onclick: () => { input.value = v; run(false); } }, String(v)))),
         h('div.row-inline', input,
-          h('button.btn.btn-primary', { onclick: () => run(false) }, 'Suchen'),
-          h('button.btn.btn-ghost', { onclick: () => run(true) }, 'Einfügen'),
-          h('button.btn.btn-ghost', { onclick: () => { token++; reset(); clearView(); log.replaceChildren(); draw(); note.textContent = 'Baum zurückgesetzt.'; } }, '↺ Neu'))),
-      h('div.panel', h('div.panel-title', 'Suchbaum'), h('div.bst-wrap', svgEl)),
-      h('div.panel', h('div.panel-title', 'Vergleiche'), log),
+          h('button.btn.btn-primary', { onclick: () => run(false) }, I18n.t('vis.searchBtn')),
+          h('button.btn.btn-ghost', { onclick: () => run(true) }, I18n.t('vis.insertBtn')),
+          h('button.btn.btn-ghost', { onclick: () => { token++; reset(); clearView(); log.replaceChildren(); draw(); note.textContent = I18n.t('vis.treeReset'); } }, I18n.t('vis.resetBtn')))),
+      h('div.panel', h('div.panel-title', I18n.t('vis.searchTree')), h('div.bst-wrap', svgEl)),
+      h('div.panel', h('div.panel-title', I18n.t('vis.comparisons')), log),
       note,
     );
     draw();
@@ -2302,9 +2317,9 @@ const Visuals = (() => {
     const H = (Math.max(...nodes.map((n) => n.d)) + 1) * 64 + 14;
 
     const MODES = {
-      pre:  { label: 'Preorder',  hint: 'Wurzel → Links → Rechts', fn: 'preorder',  seq: ['v', 'l', 'r'], why: 'Preorder: Die Wurzel kommt <strong>zuerst</strong> — noch bevor ein Kind angeschaut wird.' },
-      in:   { label: 'Inorder',   hint: 'Links → Wurzel → Rechts', fn: 'inorder',   seq: ['l', 'v', 'r'], why: 'Inorder: Erst ist der <strong>linke</strong> Teilbaum komplett fertig, dann ist die Wurzel dran.' },
-      post: { label: 'Postorder', hint: 'Links → Rechts → Wurzel', fn: 'postorder', seq: ['l', 'r', 'v'], why: 'Postorder: Die Wurzel kommt <strong>zuletzt</strong> — erst wenn beide Kinder erledigt sind.' },
+      pre:  { label: 'Preorder',  hint: I18n.t('vis.hintPre'), fn: 'preorder',  seq: ['v', 'l', 'r'], why: I18n.t('vis.whyPre') },
+      in:   { label: 'Inorder',   hint: I18n.t('vis.hintIn'), fn: 'inorder',   seq: ['l', 'v', 'r'], why: I18n.t('vis.whyIn') },
+      post: { label: 'Postorder', hint: I18n.t('vis.hintPost'), fn: 'postorder', seq: ['l', 'r', 'v'], why: I18n.t('vis.whyPost') },
     };
     const codeFor = (m) => {
       const f = MODES[m].fn;
@@ -2322,19 +2337,19 @@ const Visuals = (() => {
       const push = (cur, line, msg) => res.push({ cur, line, msg, out: out.slice(), stack: stack.slice() });
       (function go(n) {
         stack.push(n);
-        push(n, 1, `Aufruf <code>${M.fn}(${n.name})</code> — nicht <code>None</code>, also geht es weiter.`);
+        push(n, 1, I18n.t('vis.callNote', { fn: M.fn, name: n.name }));
         M.seq.forEach((s, i) => {
           const line = 3 + i;
           if (s === 'v') {
             out.push(n);
-            push(n, line, `<strong>${n.name}</strong> wird ausgegeben (Platz ${out.length}). ${M.why}`);
+            push(n, line, I18n.t('vis.printedNote', { name: n.name, p: out.length, why: M.why }));
           } else {
             const c = s === 'l' ? n.l : n.r;
-            const side = s === 'l' ? 'linkes' : 'rechtes';
-            if (!c) push(n, line, `${n.name} hat kein ${side} Kind: <code>${M.fn}(None)</code> kehrt sofort zurück (Basisfall).`);
+            const side = s === 'l' ? I18n.t('vis.leftChild') : I18n.t('vis.rightChild');
+            if (!c) push(n, line, I18n.t('vis.noChild', { name: n.name, side, fn: M.fn }));
             else {
               go(c);
-              push(n, line, `Zurück bei <strong>${n.name}</strong>: der ${s === 'l' ? 'linke' : 'rechte'} Teilbaum ist fertig.`);
+              push(n, line, I18n.t('vis.backAt', { name: n.name, side: s === 'l' ? I18n.t('vis.leftSub') : I18n.t('vis.rightSub') }));
             }
           }
         });
@@ -2344,7 +2359,7 @@ const Visuals = (() => {
       return res;
     };
 
-    const svgEl = svg('svg', { class: 'tw', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Binärbaum aus Ordnern' });
+    const svgEl = svg('svg', { class: 'tw', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': I18n.t('vis.folderTree') });
     svgEl.style.maxWidth = Math.max(W, 320) + 'px';
     const outEl = h('div.chip-row.tw-out');
     const pathEl = h('div.call-path');
@@ -2381,7 +2396,7 @@ const Visuals = (() => {
       paintCode(-1);
       outEl.replaceChildren();
       pathEl.replaceChildren();
-      note.innerHTML = `<strong>${M.label}</strong> — ${M.hint}. Drücke ▶ Schritt und schau, wann jeder Ordner ausgegeben wird.`;
+      note.innerHTML = I18n.t('vis.modeNote', { label: M.label, hint: M.hint });
     }
     const ctl = controlBar({
       total: 0,
@@ -2406,12 +2421,12 @@ const Visuals = (() => {
     }
 
     root.append(
-      h('div.panel', h('div.panel-title', 'Reihenfolge wählen'), h('div.chip-row', modeBtns)),
+      h('div.panel', h('div.panel-title', I18n.t('vis.chooseOrder')), h('div.chip-row', modeBtns)),
       h('div.scene-grid',
-        h('div.panel', h('div.panel-title', 'Ordnerbaum'), h('div.bst-wrap', svgEl),
-          h('div.panel-title.mt', 'Aufrufkette'), pathEl),
+        h('div.panel', h('div.panel-title', I18n.t('vis.folderTreeTitle')), h('div.bst-wrap', svgEl),
+          h('div.panel-title.mt', I18n.t('vis.callChain')), pathEl),
         h('div.panel.panel-code', h('div.panel-title', 'Code'), codeEl,
-          h('div.panel-title.mt', 'Ausgabe'), outEl)),
+          h('div.panel-title.mt', I18n.t('vis.output')), outEl)),
       note, ctl.el,
     );
     setMode('pre');
@@ -2452,12 +2467,12 @@ const Visuals = (() => {
           const cur = q.shift();
           visited.push(cur);
           if (cur === goal) {
-            finish(cur, q.slice(), `<strong>${cur}</strong> ist das Ziel! Die Route entsteht rückwärts über die „gekommen von“-Einträge.`);
+            finish(cur, q.slice(), I18n.t('vis.goalBack', { cur }));
             break;
           }
           const added = [];
           adj[cur].forEach((nb) => { if (!seen.has(nb)) { seen.add(nb); parent[nb] = cur; q.push(nb); added.push(nb); } });
-          finish(cur, q.slice(), `Vorne aus der Warteschlange: <strong>${cur}</strong>. ${added.length ? `Neue Nachbarn hinten anstellen: <code>${added.join(', ')}</code>.` : 'Keine neuen Nachbarn — alle schon bekannt.'}`);
+          finish(cur, q.slice(), I18n.t('vis.dequeued', { cur, tail: added.length ? I18n.t('vis.addNeighbours', { list: added.join(', ') }) : I18n.t('vis.noNew') }));
         }
       } else {
         const done = new Set();
@@ -2469,22 +2484,22 @@ const Visuals = (() => {
           if (par) parent[cur] = par;
           visited.push(cur);
           if (cur === goal) {
-            finish(cur, [...new Set(st.map((x) => x[0]))], `<strong>${cur}</strong> ist das Ziel! Diese Route muss nicht die kürzeste sein.`);
+            finish(cur, [...new Set(st.map((x) => x[0]))], I18n.t('vis.goalNotShortest', { cur }));
             break;
           }
           const nbs = adj[cur].filter((x) => !done.has(x));
           for (let i = nbs.length - 1; i >= 0; i--) st.push([nbs[i], cur]);
-          finish(cur, [...new Set(st.map((x) => x[0]))].filter((x) => !done.has(x)), `Oben vom Stapel: <strong>${cur}</strong>. ${nbs.length ? `Nachbarn <code>${nbs.join(', ')}</code> kommen oben drauf — der erste wird als Nächstes gewählt, es geht erst mal <em>tief</em> hinein.` : 'Sackgasse! Zurück zum letzten offenen Abzweig.'}`);
+          finish(cur, [...new Set(st.map((x) => x[0]))].filter((x) => !done.has(x)), I18n.t('vis.fromStack', { cur, tail: nbs.length ? I18n.t('vis.neighboursOnTop', { list: nbs.join(', ') }) : I18n.t('vis.deadEnd') }));
         }
       }
       return res;
     }
 
-    const svgEl = svg('svg', { class: 'gr', viewBox: '0 0 540 300', role: 'img', 'aria-label': 'Liniennetz mit Haltestellen' });
+    const svgEl = svg('svg', { class: 'gr', viewBox: '0 0 540 300', role: 'img', 'aria-label': I18n.t('vis.lineMap') });
     const frontEl = h('div.chip-row.gr-front');
     const frontTitle = h('div.panel-title');
     const note = h('p.step-note');
-    const algoBtns = { bfs: h('button.pill', { onclick: () => setAlgo('bfs') }, 'BFS · Breitensuche'), dfs: h('button.pill', { onclick: () => setAlgo('dfs') }, 'DFS · Tiefensuche') };
+    const algoBtns = { bfs: h('button.pill', { onclick: () => setAlgo('bfs') }, I18n.t('vis.bfsLabel')), dfs: h('button.pill', { onclick: () => setAlgo('dfs') }, I18n.t('vis.dfsLabel')) };
     const adjEl = h('pre.gr-adj');
 
     function draw(s) {
@@ -2505,7 +2520,7 @@ const Visuals = (() => {
           + (s && s.cur === n ? ' cur' : '')
           + (pathSet.has(n) ? ' path' : '')
           + (n === start ? ' is-start' : '') + (n === goal ? ' is-goal' : '');
-        const g = svg('g', { class: cls, tabindex: 0, role: 'button', 'aria-label': 'Haltestelle ' + n });
+        const g = svg('g', { class: cls, tabindex: 0, role: 'button', 'aria-label': I18n.t('vis.stop') + n });
         g.append(svg('circle', { cx: x, cy: y, r: 17 }));
         const t = svg('text', { x, y: y + 34, 'text-anchor': 'middle' });
         t.textContent = n;
@@ -2521,12 +2536,12 @@ const Visuals = (() => {
       });
     }
     function hint() {
-      if (!start) note.innerHTML = 'Klicke eine <strong>Starthaltestelle</strong> (S) im Netz an.';
-      else if (!goal) note.innerHTML = `Start: <strong>${start}</strong>. Klicke jetzt die <strong>Zielhaltestelle</strong> (Z) an.`;
-      else note.innerHTML = `Route von <strong>${start}</strong> nach <strong>${goal}</strong> — drücke ▶ Schritt oder Auto-Play.`;
+      if (!start) note.innerHTML = I18n.t('vis.clickStart');
+      else if (!goal) note.innerHTML = I18n.t('vis.startSet', { start });
+      else note.innerHTML = I18n.t('vis.routeSet', { start, goal });
     }
     function paintFront(s) {
-      frontTitle.textContent = algo === 'bfs' ? 'Warteschlange (vorne → hinten)' : 'Stapel (unten → oben)';
+      frontTitle.textContent = algo === 'bfs' ? I18n.t('vis.queueFrontBack') : I18n.t('vis.stackBottomTop');
       frontEl.replaceChildren(...(s ? s.frontier : []).map((n) => h('code.tw-chip', n)));
     }
     const ctl = controlBar({
@@ -2537,7 +2552,7 @@ const Visuals = (() => {
         const s = snaps[i];
         draw(s);
         paintFront(s);
-        note.innerHTML = s.msg + (s.path ? `<br>Route: <strong>${s.path.join(' → ')}</strong> (${s.path.length - 1} Fahrten, ${s.visited.length} Haltestellen besucht).` : '');
+        note.innerHTML = s.msg + (s.path ? I18n.t('vis.routeInfo', { path: s.path.join(' → '), trips: s.path.length - 1, n: s.visited.length }) : '');
       },
       onReset() { draw(null); paintFront(null); hint(); },
     });
@@ -2557,11 +2572,11 @@ const Visuals = (() => {
     }
 
     root.append(
-      h('div.panel', h('div.panel-title', 'Suchverfahren'), h('div.chip-row', algoBtns.bfs, algoBtns.dfs)),
-      h('div.panel', h('div.panel-title', 'Liniennetz (klicke Start, dann Ziel)'), h('div.bst-wrap', svgEl)),
+      h('div.panel', h('div.panel-title', I18n.t('vis.searchMethod')), h('div.chip-row', algoBtns.bfs, algoBtns.dfs)),
+      h('div.panel', h('div.panel-title', I18n.t('vis.lineNet')), h('div.bst-wrap', svgEl)),
       h('div.scene-grid',
         h('div.panel', frontTitle, frontEl),
-        h('div.panel.panel-code', h('div.panel-title', 'So sieht der Graph in Python aus'), adjEl)),
+        h('div.panel.panel-code', h('div.panel-title', I18n.t('vis.graphInPython')), adjEl)),
       note, ctl.el,
     );
     setAlgo('bfs');
@@ -2574,16 +2589,16 @@ const Visuals = (() => {
     const classEls = {};
     const classBox = h('div.oo-classes', cfg.classes.map((c) => {
       const el = h('div.oo-class',
-        h('div.oo-head', h('strong', 'class ' + c.name), h('span.oo-inh', c.parent ? `erbt von ${c.parent}` : 'Basisklasse')),
-        h('div.oo-sub', 'Attribute'), h('div.oo-list', c.attrs.map((a) => h('code', 'self.' + a))),
-        h('div.oo-sub', 'Methoden'), h('div.oo-list', c.methods.map((m) => h('code', m))));
+        h('div.oo-head', h('strong', 'class ' + c.name), h('span.oo-inh', c.parent ? I18n.t('vis.inheritsFrom', { p: c.parent }) : I18n.t('vis.baseClass'))),
+        h('div.oo-sub', I18n.t('vis.attributes')), h('div.oo-list', c.attrs.map((a) => h('code', 'self.' + a))),
+        h('div.oo-sub', I18n.t('vis.methods')), h('div.oo-list', c.methods.map((m) => h('code', m))));
       classEls[c.name] = el;
       return el;
     }));
     const lineEls = cfg.script.map((s, i) => h('div.code-line', h('span.ln', i + 1), h('span.src', { html: highlight(s.code) })));
     const objBox = h('div.oo-objects');
     const note = h('p.step-note');
-    const intro = 'Links steht die Blaupause, rechts entstehen die echten Objekte. Drücke ▶ Schritt — jede Zeile Code ändert den Speicher.';
+    const intro = I18n.t('vis.objIntro');
     let objs = {};
 
     const ctl = controlBar({
@@ -2628,10 +2643,10 @@ const Visuals = (() => {
     note.textContent = intro;
 
     root.append(
-      h('div.panel.panel-code', h('div.panel-title', 'Dein Programm'), h('div.code-block', lineEls)),
+      h('div.panel.panel-code', h('div.panel-title', I18n.t('vis.yourProgram')), h('div.code-block', lineEls)),
       h('div.scene-grid',
-        h('div.panel', h('div.panel-title', 'Blaupausen (Klassen)'), classBox),
-        h('div.panel', h('div.panel-title', 'Speicher: Objekte (Instanzen)'), objBox)),
+        h('div.panel', h('div.panel-title', I18n.t('vis.blueprints')), classBox),
+        h('div.panel', h('div.panel-title', I18n.t('vis.objectsMem')), objBox)),
       note, ctl.el,
     );
     return { destroy: ctl.destroy };
@@ -2643,7 +2658,7 @@ const Visuals = (() => {
   function renderScene(name, root, cfg, ctx) {
     const factory = scenes[name];
     if (!factory) {
-      root.append(h('p.muted', `Visualisierung "${name}" ist noch nicht verfügbar.`));
+      root.append(h('p.muted', I18n.t('vis.vizMissing', { name })));
       return { destroy() {} };
     }
     return factory(root, cfg, ctx);

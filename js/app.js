@@ -256,6 +256,9 @@
 
   /** Typische Python-Fehlermeldungen → kurzer Anfänger-Hinweis: [Muster, Deutsch, Englisch]. */
   const ERROR_HINTS = [
+    [/Errno 29|I\/O error/,
+      '<code>input()</code> gibt es in diesem Trainer nicht — hier kann nichts getippt werden. Lege den Wert direkt fest, zum Beispiel <code>name = "Mia"</code>.',
+      '<code>input()</code> is not available in this trainer — there is nowhere to type. Set the value directly instead, for example <code>name = "Mia"</code>.'],
     [/takes \d+ positional arguments? but \d+ (?:was|were) given/,
       'Fehlt in der Methode das <code>self</code>? Jede Methode in einer Klasse braucht es als ersten Parameter: <code>def info(self):</code>.',
       'Is <code>self</code> missing in the method? Every method in a class needs it as its first parameter: <code>def info(self):</code>.'],
@@ -297,10 +300,7 @@
     const hit = ERROR_HINTS.find(([re]) => re.test(text || ''));
     return hit ? hit[I18n.lang === 'de' ? 1 : 2] : null;
   }
-  const hintBox = (text) => { const e = explainError(text); return e ? h('div.err-hint', { html: `<strong>${t('hint.tip')}</strong> ` + e }) : null; };
-
-  /** Hinweis, solange Szenen-/Aufgabentexte nur auf Deutsch vorliegen. */
-  const contentNotice = () => (I18n.lang === 'de' ? null : h('p.lang-note', t('notice.de-only')));
+  const hintBox = (text) => { const e = explainError(text); return e ? h('div.err-hint', { html: `<strong>${t('hint.tip')}</strong> ` + e }) : ''; };
 
   function toast(text) {
     const t = h('div.toast', text);
@@ -458,7 +458,7 @@
     const done = () => Store.topic(topic.id).scenes;
     const pills = h('div.scene-tabs');
     const stage = h('div');
-    pane.append(contentNotice(), pills, stage);
+    pane.append(pills, stage);
 
     function paintPills() {
       pills.innerHTML = '';
@@ -473,7 +473,7 @@
       const mount = h('div.scene');
       const sceneText = I18n.scene(topic, scene);
       stage.append(h('div.scene-head', h('h2', sceneText.title), h('p', sceneText.blurb)), mount);
-      const instance = Visuals.renderScene(scene.visual, mount, scene.config, {
+      const instance = Visuals.renderScene(scene.visual, mount, I18n.sceneConfig(topic, scene), {
         touch() {
           if (Store.markScene(topic.id, scene.id)) { paintPills(); refreshChrome(); }
         },
@@ -492,7 +492,7 @@
     const rail = h('div.rail');
     const bench = h('div.bench');
     wrap.append(rail, bench);
-    pane.append(contentNotice(), wrap);
+    pane.append(wrap);
 
     const current = () => ui.task[topic.id] ?? Math.max(0, topic.tasks.findIndex((t) => !solved().includes(t.id)));
 
@@ -502,12 +502,12 @@
         h('button.rail-item' + (i === current() ? '.is-active' : '') + (solved().includes(t.id) ? '.is-done' : ''),
           { onclick: () => { ui.task[topic.id] = i; paintRail(); paintBench(); } },
           h('span.rail-num', i + 1),
-          h('div', h('small', I18n.level(t.level)), h('span.t', t.title)))));
+          h('div', h('small', I18n.level(t.level)), h('span.t', I18n.task(topic, t).title)))));
     }
 
     function paintBench() {
       const idx = current();
-      const task = topic.tasks[idx];
+      const task = I18n.task(topic, topic.tasks[idx]);
       const draftKey = `${topic.id}/${task.id}`;
       ui.fails[draftKey] ||= 0;
       bench.innerHTML = '';
@@ -604,7 +604,7 @@
         ),
         editor.el,
         h('div.btn-row', btnCheck, btnRun, btnHint, btnReset, h('span.spacer'), btnSolution,
-          h('span.kbd-hint', h('kbd', '⌘'), ' / ', h('kbd', 'Strg'), ' + ', h('kbd', '↵'))),
+          h('span.kbd-hint', h('kbd', '⌘'), ' / ', h('kbd', t('kbd.ctrl')), ' + ', h('kbd', '↵'))),
         feedback,
         consoleEl,
       );
@@ -621,7 +621,7 @@
     let lastCode = null;
     const consoleEl = h('div.console');
     const editor = Visuals.codeEditor({
-      value: Store.sandboxCode(topic.id) ?? topic.sandbox,
+      value: Store.sandboxCode(topic.id) ?? I18n.sandbox(topic),
       minLines: 14,
       onRun: () => run(),
       onChange: (v) => Store.setSandboxCode(topic.id, v),
@@ -653,12 +653,12 @@
       },
     }, t('sandbox.md'));
     const btnReset = h('button.btn.btn-ghost', {
-      onclick: () => { editor.setValue(topic.sandbox); Store.setSandboxCode(topic.id, topic.sandbox); },
+      onclick: () => { editor.setValue(I18n.sandbox(topic)); Store.setSandboxCode(topic.id, I18n.sandbox(topic)); },
     }, t('train.reset'));
 
-    pane.append(contentNotice(), h('div.sandbox',
+    pane.append(h('div.sandbox',
       h('div.sandbox-bar', btnRun, btnPy, btnMd, h('span.spacer'), btnReset,
-        h('span.kbd-hint', h('kbd', '⌘'), ' / ', h('kbd', 'Strg'), ' + ', h('kbd', '↵'))),
+        h('span.kbd-hint', h('kbd', '⌘'), ' / ', h('kbd', t('kbd.ctrl')), ' + ', h('kbd', '↵'))),
       editor.el,
       consoleEl,
     ));

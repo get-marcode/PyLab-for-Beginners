@@ -399,7 +399,7 @@ while tickets:
         },
         pitfalls: [
           '<code>list.pop(0)</code> funktioniert, ist aber langsam: Alle anderen Elemente müssen nachrücken. Für große Schlangen nimm <code>deque</code>.',
-          'Eine leere Queue zu leeren löst einen Fehler aus — prüfe vorher, ob noch etwas drin ist.',
+          'Aus einer leeren Queue etwas zu entnehmen löst einen Fehler aus (<code>IndexError</code>) — prüfe vorher, ob noch etwas drin ist.',
           'Stack und Queue unterscheiden sich nur in <em>wo</em> du entnimmst: oben (LIFO) oder vorn (FIFO).',
         ],
         cheat: [['q = deque()', 'leere Queue'], ['q.append(x)', 'hinten anstellen'], ['q.popleft()', 'vorn entnehmen'], ['q[0]', 'wer ist dran?'], ['len(q)', 'Länge']],
@@ -424,7 +424,7 @@ while tickets:
         },
         pitfalls: [
           '<code>list.pop(0)</code> works but is slow: all other elements have to move up. For big queues use <code>deque</code>.',
-          'Taking from an empty queue raises an error — check first whether anything is left.',
+          'Taking from an empty queue raises an error (<code>IndexError</code>) — check first whether anything is left.',
           'Stack and queue only differ in <em>where</em> you take from: top (LIFO) or front (FIFO).',
         ],
         cheat: [['q = deque()', 'empty queue'], ['q.append(x)', 'join at the back'], ['q.popleft()', 'take from the front'], ['q[0]', 'who is next?'], ['len(q)', 'length']],
@@ -441,13 +441,13 @@ while tickets:
           ['Kopf (head)', 'Der erste Knoten. Wer ihn verliert, verliert die ganze Kette.'],
         ],
         example: {
-          code: py`class Knoten:
+          code: py`class Node:
     def __init__(self, wert, next=None):
         self.wert = wert
         self.next = next
 
-kopf = Knoten("Song A", Knoten("Song C"))
-neu = Knoten("Song B", kopf.next)   # zeigt auf C
+kopf = Node("Song A", Node("Song C"))
+neu = Node("Song B", kopf.next)   # zeigt auf C
 kopf.next = neu                     # A zeigt jetzt auf B
 
 k = kopf
@@ -461,7 +461,7 @@ while k:
           'Beim Durchlaufen immer auf <code>None</code> prüfen, sonst <code>AttributeError</code> am Ende.',
           'Auf das n-te Element kommst du nicht direkt: Du musst n-mal <code>next</code> folgen.',
         ],
-        cheat: [['k = Knoten(1)', 'Knoten anlegen'], ['k.next = n', 'Zeiger setzen'], ['while k:', 'durchlaufen'], ['k = k.next', 'ein Schritt weiter'], ['k is None', 'Ende erreicht?']],
+        cheat: [['k = Node(1)', 'Knoten anlegen'], ['k.next = n', 'Zeiger setzen'], ['while k:', 'durchlaufen'], ['k = k.next', 'ein Schritt weiter'], ['k is None', 'Ende erreicht?']],
       },
       en: {
         analogy: 'A <strong>linked list</strong> is a treasure hunt: every note (node) holds a clue (value) and tells you where the next one lies (<code>next</code>). Slipping in a new note only means rewriting two clues — nobody has to move house.',
@@ -650,8 +650,8 @@ print(factorial(5))              # 5*4*3*2*1`,
       de: {
         analogy: 'Karten sortieren: <strong>Bubble Sort</strong> ist, immer wieder die Nachbarkarten zu vergleichen und zu tauschen, bis nichts mehr getauscht wird. <strong>Merge Sort</strong> teilt den Stapel, sortiert die Hälften getrennt und mischt sie zu einem sortierten Stapel zusammen.',
         terms: [
-          ['Bubble Sort', 'Vergleicht Nachbarn und tauscht. Einfach, aber langsam: O(n²).'],
-          ['Merge Sort', 'Teilen, rekursiv sortieren, mischen. Schnell: O(n log n).'],
+          ['Bubble Sort', 'Vergleicht Nachbarn und tauscht. Einfach, aber langsam: O(n²) — die Arbeit wächst im Quadrat: doppelt so viele Zahlen, vierfache Arbeit.'],
+          ['Merge Sort', 'Teilen, rekursiv sortieren, mischen. Schnell: O(n log n) — doppelt so viele Zahlen, nur etwas mehr als doppelte Arbeit.'],
           ['key / sorted()', 'In der Praxis nutzt du <code>sorted(liste, key=…)</code> — die eigenen Algorithmen zeigen, <em>wie</em> das darunter funktioniert.'],
         ],
         example: {
@@ -680,8 +680,8 @@ print(bubble_sort([5, 2, 9, 1, 7]))`,
       en: {
         analogy: 'Sorting cards: <strong>bubble sort</strong> means comparing neighbouring cards and swapping them again and again until nothing is swapped any more. <strong>Merge sort</strong> splits the pile, sorts the halves separately and merges them into one sorted pile.',
         terms: [
-          ['Bubble sort', 'Compares neighbours and swaps. Simple but slow: O(n²).'],
-          ['Merge sort', 'Split, sort recursively, merge. Fast: O(n log n).'],
+          ['Bubble sort', 'Compares neighbours and swaps. Simple but slow: O(n²) — the work grows quadratically: twice as many numbers, four times the work.'],
+          ['Merge sort', 'Split, sort recursively, merge. Fast: O(n log n) — twice as many numbers, only a bit more than twice the work.'],
           ['key / sorted()', 'In practice you use <code>sorted(items, key=…)</code> — writing the algorithms yourself shows <em>how</em> that works underneath.'],
         ],
         example: {
