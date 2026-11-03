@@ -2127,9 +2127,678 @@ print("Symm. Diff.: ", sorted(a ^ b))
 print("10.0.0.1" in a)
 `,
     },
-    soon(13, 'rekursion',     'Rekursion',                      'algo',       '↻'),
-    soon(14, 'sortieren',     'Sortieralgorithmen (Bubble / Merge)', 'algo',  '⇅'),
-    soon(15, 'bst',           'Binary Search Tree (BST)',       'baum',       '⌥'),
+    /* ----------------------------------------------------------------- 13 */
+    {
+      id: 13, slug: 'rekursion', title: 'Rekursion',
+      subtitle: 'Funktionen, die sich selbst aufrufen',
+      group: 'algo', icon: '↻', status: 'ready',
+      scenario: 'Dateisystem-Explorer',
+      lead: 'Ordner enthalten Ordner, die Ordner enthalten … Wie tief es geht, weiß vorher niemand. <strong>Rekursion</strong> löst das elegant: Eine Funktion ruft sich für ein kleineres Teilproblem selbst auf — bis ein <strong>Basisfall</strong> die Kette beendet. Im Dateisystem-Explorer ist ein Ordner ein Dictionary: <em>Name → Unterordner (dict)</em> oder <em>Name → Dateigröße (Zahl)</em>.',
+
+      scenes: [
+        {
+          id: 'rekstack',
+          title: 'Stack bei Rekursion',
+          blurb: 'Jeder Aufruf wartet auf das Ergebnis des nächsten. Erst der Basisfall liefert einen Wert, dann laufen die Antworten Stück für Stück zurück.',
+          visual: 'callStack',
+          config: {
+            lines: [
+              'def fakultaet(n):',
+              '    if n <= 1:',
+              '        return 1',
+              '    return n * fakultaet(n - 1)',
+              '',
+              'print(fakultaet(4))',
+            ],
+            steps: [
+              { line: 5, push: { name: 'fakultaet(4)', vars: { n: '4' } },
+                note: 'Der erste Aufruf: <code>fakultaet(4)</code> bekommt seinen eigenen Frame.' },
+              { line: 3, set: { wartet: '4 * fakultaet(3)' },
+                note: 'Der Basisfall <code>n &lt;= 1</code> trifft nicht zu. Die Rechnung kann erst weitergehen, wenn <code>fakultaet(3)</code> antwortet — also <strong>wartet</strong> dieser Frame.' },
+              { line: 3, push: { name: 'fakultaet(3)', vars: { n: '3' } },
+                note: 'Ein neuer Frame türmt sich auf den alten. Die Aufgabe ist kleiner geworden: 3 statt 4.' },
+              { line: 3, set: { wartet: '3 * fakultaet(2)' },
+                note: 'Auch hier kein Basisfall — wieder warten.' },
+              { line: 3, push: { name: 'fakultaet(2)', vars: { n: '2' } },
+                note: 'Dritter Frame. Der Stack wächst mit jeder Ebene.' },
+              { line: 3, set: { wartet: '2 * fakultaet(1)' },
+                note: 'Noch immer kein Wert — aber gleich.' },
+              { line: 3, push: { name: 'fakultaet(1)', vars: { n: '1' } },
+                note: 'Vierter Frame mit <code>n = 1</code>: Jetzt trifft der Basisfall zu!' },
+              { line: 2, ret: '1',
+                note: '<strong>Basisfall erreicht.</strong> <code>return 1</code> beendet die Kette nach unten, der oberste Frame verschwindet und liefert 1 zurück.' },
+              { line: 3, ret: '2',
+                note: 'Der wartende Frame rechnet <code>2 * 1 = 2</code>, gibt 2 zurück und wird abgebaut.' },
+              { line: 3, ret: '6',
+                note: '<code>3 * 2 = 6</code> — die Werte wandern Frame für Frame nach unten zurück.' },
+              { line: 3, ret: '24',
+                note: '<code>4 * 6 = 24</code>. Der erste Aufruf ist fertig, der Stack ist wieder leer (bis auf <code>&lt;module&gt;</code>).' },
+              { line: 5, out: '24',
+                note: 'Ohne Basisfall würde der Stack ewig wachsen — bis Python mit einem <code>RecursionError</code> abbricht.' },
+            ],
+          },
+        },
+        {
+          id: 'explorer',
+          title: 'Ordner durchwandern',
+          blurb: 'Eine rekursive Funktion besucht jeden Ordner und ruft sich für jeden Unterordner selbst auf. Beobachte Tiefe und Dateizähler.',
+          visual: 'folderWalk',
+          config: {
+            tree: {
+              'readme.txt': 4,
+              docs: { 'bericht.pdf': 120, archiv: { 'alt.pdf': 90, 'neu.pdf': 95 } },
+              bilder: { 'logo.png': 30, leer: {} },
+              'notizen.txt': 2,
+            },
+          },
+        },
+      ],
+
+      tasks: [
+        {
+          id: 'r1', level: 'Init', title: 'Countdown beim Aufräumen',
+          scenario: 'Der Explorer löscht einen großen Ordner und zeigt den Rest-Countdown an: 3, 2, 1 — ganz ohne Schleife, sondern mit einer Funktion, die sich selbst aufruft.',
+          goal: 'Schreibe <code>countdown(n)</code> <strong>rekursiv</strong>: Sie gibt die Liste <code>[n, n-1, …, 1]</code> zurück. Der <strong>Basisfall</strong>: Ist <code>n</code> kleiner oder gleich 0, ist das Ergebnis die leere Liste <code>[]</code>.',
+          hint: 'Rekursionsschritt: Die Liste beginnt mit <code>n</code>, danach folgt der Countdown von <code>n - 1</code>: <code>[n] + countdown(n - 1)</code>. Der Basisfall steht ganz oben und kommt <em>vor</em> dem Selbstaufruf.',
+          starter: py`def countdown(n):
+    pass
+`,
+          solution: py`def countdown(n):
+    if n <= 0:
+        return []
+    return [n] + countdown(n - 1)
+`,
+          tests: py`
+assert _source.count("countdown(") >= 2, "Die Funktion muss sich selbst aufrufen (Rekursion)."
+assert "for " not in _source and "while " not in _source, "Löse es rekursiv — ohne Schleife."
+assert countdown(3) == [3, 2, 1], "countdown(3) muss [3, 2, 1] ergeben."
+assert countdown(1) == [1], "countdown(1) muss [1] ergeben."
+assert countdown(0) == [], "Basisfall: countdown(0) ist die leere Liste."
+assert countdown(-4) == [], "Auch negative Zahlen enden im Basisfall."
+assert countdown(6) == [6, 5, 4, 3, 2, 1]
+`,
+        },
+        {
+          id: 'r2', level: 'Update', title: 'Dateien zählen',
+          scenario: 'Der Explorer soll anzeigen, wie viele Dateien in einem Ordner stecken — inklusive aller Unterordner, egal wie tief. Ein Ordner ist ein Dictionary: Werte, die selbst Dictionaries sind, sind Unterordner, alles andere sind Dateien.',
+          goal: 'Schreibe <code>dateien_zaehlen(ordner)</code> rekursiv: Sie gibt die Gesamtzahl der Dateien zurück. Gehe die Werte des Ordners durch; ist ein Wert ein <code>dict</code> (prüfe mit <code>isinstance(x, dict)</code>), zählst du darin per Selbstaufruf weiter.',
+          hint: '<code>for inhalt in ordner.values():</code> — ist <code>inhalt</code> ein dict, addiere <code>dateien_zaehlen(inhalt)</code>, sonst <code>1</code>.',
+          starter: py`def dateien_zaehlen(ordner):
+    pass
+`,
+          solution: py`def dateien_zaehlen(ordner):
+    anzahl = 0
+    for inhalt in ordner.values():
+        if isinstance(inhalt, dict):
+            anzahl += dateien_zaehlen(inhalt)
+        else:
+            anzahl += 1
+    return anzahl
+`,
+          tests: py`
+assert _source.count("dateien_zaehlen(") >= 2, "Die Funktion muss sich für Unterordner selbst aufrufen."
+fs = {"a.txt": 1, "docs": {"b.txt": 2, "c.txt": 3, "sub": {"d.txt": 4}}, "leer": {}}
+assert dateien_zaehlen(fs) == 4, f"dateien_zaehlen liefert {dateien_zaehlen(fs)} — erwartet 4 (Unterordner zählen mit)."
+assert dateien_zaehlen({"x.txt": 5}) == 1, "Ein Ordner mit einer Datei hat 1 Datei."
+assert dateien_zaehlen({"a": {"b": {"c": {"tief.txt": 9}}}}) == 1, "Auch tief verschachtelte Dateien werden gezählt."
+assert dateien_zaehlen({}) == 0, "Ein leerer Ordner hat 0 Dateien."
+`,
+        },
+        {
+          id: 'r3', level: 'Debugging', title: 'Endlosrekursion',
+          scenario: 'Der Explorer soll zählen, wie viele Dateien in n verschachtelten Ebenen liegen (je Ebene eine Datei mehr: 1 + 2 + … + n). Beim Start bricht Python mit <code>RecursionError: maximum recursion depth exceeded</code> ab.',
+          goal: 'Repariere <code>dateien_bis(n)</code>: Sie liefert die Summe <code>n + (n-1) + … + 1</code>. Danach muss <code>10</code> ausgegeben werden (für <code>n = 4</code>). <code>dateien_bis(0)</code> ist <code>0</code>.',
+          hint: 'Es fehlt der <strong>Basisfall</strong>: Ohne ihn ruft sich die Funktion für immer mit kleineren Zahlen auf. Wann ist die Summe offensichtlich? Bei <code>n</code> gleich 0 (oder kleiner).',
+          starter: py`def dateien_bis(n):
+    return n + dateien_bis(n - 1)
+
+print(dateien_bis(4))
+`,
+          solution: py`def dateien_bis(n):
+    if n <= 0:
+        return 0
+    return n + dateien_bis(n - 1)
+
+print(dateien_bis(4))
+`,
+          tests: py`
+assert dateien_bis(0) == 0, "Basisfall: dateien_bis(0) ist 0."
+assert dateien_bis(1) == 1
+assert dateien_bis(4) == 10, "dateien_bis(4) = 4 + 3 + 2 + 1 = 10."
+assert dateien_bis(100) == 5050, "Auch für n = 100 muss es funktionieren."
+assert _stdout.strip() == "10", "Gib dateien_bis(4) mit print aus: 10."
+assert _source.count("dateien_bis(") >= 3, "Die Funktion soll rekursiv bleiben."
+`,
+        },
+        {
+          id: 'r4', level: 'Edge Case', title: 'Wie tief ist der Ordnerbaum?',
+          scenario: 'Der Explorer zeigt an, wie tief die Ordner verschachtelt sind. Leere Ordner, Ordner nur mit Dateien und der Wurzelordner selbst dürfen die Rekursion nicht aus dem Tritt bringen.',
+          goal: 'Schreibe <code>ordner_tiefe(ordner)</code>: Ein Ordner ohne Unterordner (auch ein leerer) hat Tiefe <code>1</code>. Hat er Unterordner, ist seine Tiefe <code>1 +</code> die größte Tiefe seiner Unterordner. Achtung: <code>max()</code> auf einer leeren Sequenz wirft einen Fehler!',
+          hint: 'Merke dir die tiefste Unterebene in einer Variable, die bei <code>0</code> startet. Jeder Unterordner (dict) kann sie mit <code>max(…)</code> erhöhen. Am Ende: <code>return 1 + tiefste</code>.',
+          starter: py`def ordner_tiefe(ordner):
+    pass
+`,
+          solution: py`def ordner_tiefe(ordner):
+    tiefste = 0
+    for inhalt in ordner.values():
+        if isinstance(inhalt, dict):
+            tiefste = max(tiefste, ordner_tiefe(inhalt))
+    return 1 + tiefste
+`,
+          tests: py`
+assert ordner_tiefe({}) == 1, "Ein leerer Ordner hat Tiefe 1."
+assert ordner_tiefe({"a.txt": 1, "b.txt": 2}) == 1, "Nur Dateien: Tiefe 1."
+assert ordner_tiefe({"docs": {"x.txt": 1}}) == 2, "Ein Unterordner: Tiefe 2."
+assert ordner_tiefe({"a": {"b": {"c": {}}}}) == 4, "Vier verschachtelte (leere) Ordner: Tiefe 4."
+assert ordner_tiefe({"flach": {"f.txt": 1}, "tief": {"x": {"y": {"z.txt": 2}}}}) == 4, "Es zählt der tiefste Zweig."
+assert _source.count("ordner_tiefe(") >= 2, "Die Funktion muss sich selbst aufrufen."
+`,
+        },
+        {
+          id: 'r5', level: 'Algorithmus', title: 'Datei im Baum finden',
+          scenario: 'Die Suchleiste des Explorers soll den kompletten Pfad einer Datei finden, egal in welchem Unterordner sie liegt. Ordner sind verschachtelte Dictionaries, Dateien haben als Wert eine Größe.',
+          goal: 'Schreibe <code>finde_datei(ordner, dateiname)</code>: Sie gibt den Pfad mit <code>/</code> als Trenner zurück, z. B. <code>"docs/berichte/q1.pdf"</code> (Datei direkt im Wurzelordner: nur der Name). Gefunden wird der <strong>erste</strong> Treffer in Reihenfolge des Dictionaries (Tiefensuche). Gibt es die Datei nicht (oder ist der Ordner leer), lautet das Ergebnis <code>None</code>.',
+          hint: 'Gehe <code>ordner.items()</code> durch. Ist der Wert ein dict: suche rekursiv darin; kommt nicht <code>None</code> zurück, setze <code>name + "/" + treffer</code> zusammen. Ist es eine Datei und der Name passt: gib den Namen zurück. Erst nach der Schleife: <code>None</code>.',
+          starter: py`def finde_datei(ordner, dateiname):
+    pass
+`,
+          solution: py`def finde_datei(ordner, dateiname):
+    for name, inhalt in ordner.items():
+        if isinstance(inhalt, dict):
+            treffer = finde_datei(inhalt, dateiname)
+            if treffer is not None:
+                return name + "/" + treffer
+        elif name == dateiname:
+            return name
+    return None
+`,
+          tests: py`
+fs = {
+    "readme.txt": 1,
+    "docs": {"berichte": {"q1.pdf": 10, "q2.pdf": 11}, "notiz.txt": 2},
+    "bilder": {"logo.png": 5, "docs": {"q1.pdf": 3}},
+}
+assert _source.count("finde_datei(") >= 2, "Die Funktion muss sich rekursiv aufrufen."
+assert finde_datei(fs, "readme.txt") == "readme.txt", "Datei im Wurzelordner: nur der Name."
+assert finde_datei(fs, "q2.pdf") == "docs/berichte/q2.pdf", "Pfad zu q2.pdf stimmt nicht."
+assert finde_datei(fs, "logo.png") == "bilder/logo.png", "Pfad zu logo.png stimmt nicht."
+assert finde_datei(fs, "q1.pdf") == "docs/berichte/q1.pdf", "Bei mehreren Treffern gilt der erste (Reihenfolge des Dictionaries)."
+assert finde_datei(fs, "nix.txt") is None, "Nicht vorhandene Datei → None."
+assert finde_datei({}, "a.txt") is None, "Leerer Ordner → None."
+assert finde_datei({"a": {"b": {}}}, "x") is None, "Auch durch leere Unterordner darf nichts abstürzen."
+`,
+        },
+      ],
+
+      sandbox: py`# Sandbox — Rekursion
+def fakultaet(n):
+    if n <= 1:           # Basisfall
+        return 1
+    return n * fakultaet(n - 1)
+
+print(fakultaet(5))
+
+def dateien_zaehlen(ordner):
+    return sum(dateien_zaehlen(x) if isinstance(x, dict) else 1 for x in ordner.values())
+
+print(dateien_zaehlen({"a.txt": 1, "docs": {"b.txt": 2, "c.txt": 3}}))
+`,
+    },
+    /* ----------------------------------------------------------------- 14 */
+    {
+      id: 14, slug: 'sortieren', title: 'Sortieralgorithmen (Bubble / Merge)',
+      subtitle: 'Vergleichen, tauschen, teilen, mischen',
+      group: 'algo', icon: '⇅', status: 'ready',
+      scenario: 'Highscore-Liste & Produktpreise',
+      lead: 'Eine Highscore-Tabelle muss immer sortiert sein. <strong>Bubble Sort</strong> vergleicht Nachbarn und tauscht sie, bis nichts mehr zu tauschen ist — einfach, aber langsam (O(n²)). <strong>Merge Sort</strong> teilt die Liste, sortiert die Hälften rekursiv und mischt sie zusammen (O(n log n)).',
+
+      scenes: [
+        {
+          id: 'balken',
+          title: 'Sortier-Balken',
+          blurb: 'Jede Zahl ist ein Balken. Wähle den Algorithmus und gehe Schritt für Schritt durch (oder starte Auto-Play).',
+          visual: 'sortBars',
+          config: { data: [6, 3, 8, 2, 7, 1, 5, 4] },
+        },
+      ],
+
+      tasks: [
+        {
+          id: 'so1', level: 'Init', title: 'Bubble Sort',
+          scenario: 'Die Highscore-Tabelle eines kleinen Spiels soll aufsteigend sortiert werden. Eingebaute Funktionen sind tabu — du sollst den Algorithmus selbst schreiben.',
+          goal: 'Schreibe <code>bubble_sort(zahlen)</code>. Sie sortiert die Liste <strong>in-place</strong> aufsteigend (die übergebene Liste wird verändert) und gibt sie zurück. Verwende weder <code>sorted()</code> noch <code>.sort()</code>.',
+          hint: 'Zwei verschachtelte Schleifen: Die innere vergleicht <code>zahlen[j]</code> mit <code>zahlen[j + 1]</code> und tauscht bei Bedarf. Die äußere wiederholt das <code>len(zahlen)</code>-mal. Tauschen geht in Python elegant mit <code>a, b = b, a</code>.',
+          starter: py`def bubble_sort(zahlen):
+    pass
+`,
+          solution: py`def bubble_sort(zahlen):
+    n = len(zahlen)
+    for i in range(n):
+        for j in range(n - 1 - i):
+            if zahlen[j] > zahlen[j + 1]:
+                zahlen[j], zahlen[j + 1] = zahlen[j + 1], zahlen[j]
+    return zahlen
+`,
+          tests: py`
+assert "sorted(" not in _source and ".sort(" not in _source, "Nutze weder sorted() noch .sort() — schreibe den Algorithmus selbst."
+liste = [5, 2, 9, 1]
+r = bubble_sort(liste)
+assert r == [1, 2, 5, 9], f"Ergebnis {r} ist nicht aufsteigend sortiert."
+assert liste == [1, 2, 5, 9], "Die übergebene Liste muss in-place sortiert werden."
+assert bubble_sort([3, -1, 2, -5, 0]) == [-5, -1, 0, 2, 3], "Auch negative Zahlen müssen stimmen."
+assert bubble_sort([2, 2, 1, 1]) == [1, 1, 2, 2], "Duplikate bleiben erhalten."
+assert bubble_sort([9, 8, 7, 6, 5, 4, 3, 2, 1]) == [1, 2, 3, 4, 5, 6, 7, 8, 9], "Eine absteigende Liste ist der Worst Case."
+`,
+        },
+        {
+          id: 'so2', level: 'Update', title: 'Rangliste nach Punkten',
+          scenario: 'Die Highscore-Liste besteht aus Spielern mit Name und Punkten. Wer die meisten Punkte hat, steht oben; bei Gleichstand entscheidet der Name alphabetisch.',
+          goal: 'Schreibe <code>rangliste(spieler)</code>. <code>spieler</code> ist eine Liste von Dictionaries mit <code>"name"</code> und <code>"punkte"</code>. Gib eine <strong>neue</strong> Liste zurück: absteigend nach Punkten, bei gleichen Punkten aufsteigend nach Name. Die Originalliste bleibt unverändert. Nutze <code>sorted()</code> mit dem Parameter <code>key</code>.',
+          hint: 'Der <code>key</code> bestimmt, wonach sortiert wird. Ein Tuple als Schlüssel sortiert nach dem ersten Eintrag, bei Gleichstand nach dem zweiten: <code>key=lambda s: (-s["punkte"], s["name"])</code>. Das Minus dreht die Punkte-Reihenfolge um.',
+          starter: py`def rangliste(spieler):
+    pass
+`,
+          solution: py`def rangliste(spieler):
+    return sorted(spieler, key=lambda s: (-s["punkte"], s["name"]))
+`,
+          tests: py`
+assert "key" in _source, "Nutze sorted() mit dem Parameter key."
+spieler = [
+    {"name": "Mia", "punkte": 120},
+    {"name": "Jan", "punkte": 150},
+    {"name": "Zoe", "punkte": 120},
+    {"name": "Ali", "punkte": 120},
+]
+namen = [s["name"] for s in rangliste(spieler)]
+assert namen == ["Jan", "Ali", "Mia", "Zoe"], f"Reihenfolge {namen} — erwartet: Jan (150), dann Ali, Mia, Zoe (je 120, alphabetisch)."
+assert [s["name"] for s in spieler] == ["Mia", "Jan", "Zoe", "Ali"], "Die Originalliste darf nicht verändert werden."
+assert rangliste([]) == [], "Leere Liste → leere Liste."
+assert rangliste([{"name": "Solo", "punkte": 5}]) == [{"name": "Solo", "punkte": 5}], "Ein Spieler bleibt ein Spieler."
+`,
+        },
+        {
+          id: 'so3', level: 'Debugging', title: 'Der verlorene Wert',
+          scenario: 'Der Bubble Sort eines Praktikanten produziert merkwürdige Listen — Werte verdoppeln sich, andere verschwinden. Die Tausch-Logik ist kaputt.',
+          goal: 'Repariere den <strong>Tausch</strong> in <code>bubble_sort</code>, sodass jede Liste korrekt aufsteigend sortiert wird. Der Rest des Algorithmus ist in Ordnung.',
+          hint: 'Wenn du erst <code>werte[j] = werte[j + 1]</code> schreibst, ist der alte Wert von <code>werte[j]</code> weg! Merke ihn dir in einer Hilfsvariable — oder tausche in einem Schritt: <code>a, b = b, a</code>.',
+          starter: py`def bubble_sort(werte):
+    n = len(werte)
+    for i in range(n):
+        for j in range(n - 1):
+            if werte[j] > werte[j + 1]:
+                werte[j] = werte[j + 1]
+                werte[j + 1] = werte[j]
+    return werte
+`,
+          solution: py`def bubble_sort(werte):
+    n = len(werte)
+    for i in range(n):
+        for j in range(n - 1):
+            if werte[j] > werte[j + 1]:
+                werte[j], werte[j + 1] = werte[j + 1], werte[j]
+    return werte
+`,
+          tests: py`
+assert bubble_sort([3, 1, 2]) == [1, 2, 3], "[3, 1, 2] wird nicht korrekt sortiert."
+assert bubble_sort([5, 4, 3, 2, 1]) == [1, 2, 3, 4, 5], "[5, 4, 3, 2, 1] wird nicht korrekt sortiert."
+assert bubble_sort([2, 2, 1]) == [1, 2, 2], "Duplikate dürfen nicht verloren gehen."
+assert bubble_sort([10, -3, 7, 0]) == [-3, 0, 7, 10], "Negative Zahlen und Null werden nicht korrekt sortiert."
+assert bubble_sort([]) == [], "Leere Liste → leere Liste."
+`,
+        },
+        {
+          id: 'so4', level: 'Edge Case', title: 'Früher Abbruch',
+          scenario: 'Meistens ist die Highscore-Liste schon fast sortiert. Ein optimierter Bubble Sort bricht ab, sobald ein kompletter Durchlauf ohne Tausch blieb. Besondere Fälle: schon sortierte Listen, Listen mit einem oder gar keinem Element.',
+          goal: 'Schreibe <code>bubble_sort_zaehler(werte)</code>. Sie sortiert eine <strong>Kopie</strong> der Liste und gibt <code>(sortierte_liste, durchlaeufe)</code> zurück. Ein Durchlauf geht einmal über alle Nachbarpaare. Läuft ein Durchlauf ohne Tausch, endet der Algorithmus — dieser letzte Durchlauf zählt mit. Bei weniger als 2 Elementen gibt es <code>0</code> Durchläufe.',
+          hint: 'Setze vor jedem Durchlauf <code>getauscht = False</code> und bei jedem Tausch <code>True</code>. Eine <code>while getauscht:</code>-Schleife wiederholt, solange noch getauscht wurde. Prüfe vorab den Fall <code>len(werte) &lt; 2</code>.',
+          starter: py`def bubble_sort_zaehler(werte):
+    pass
+`,
+          solution: py`def bubble_sort_zaehler(werte):
+    liste = list(werte)
+    if len(liste) < 2:
+        return (liste, 0)
+    durchlaeufe = 0
+    getauscht = True
+    while getauscht:
+        getauscht = False
+        durchlaeufe += 1
+        for j in range(len(liste) - 1):
+            if liste[j] > liste[j + 1]:
+                liste[j], liste[j + 1] = liste[j + 1], liste[j]
+                getauscht = True
+    return (liste, durchlaeufe)
+`,
+          tests: py`
+assert "sorted(" not in _source and ".sort(" not in _source, "Schreibe den Algorithmus selbst."
+assert tuple(bubble_sort_zaehler([1, 2, 3])) == ([1, 2, 3], 1), "Eine schon sortierte Liste braucht genau 1 (tauschfreien) Durchlauf."
+assert tuple(bubble_sort_zaehler([3, 2, 1])) == ([1, 2, 3], 3), "[3, 2, 1]: zwei Durchläufe mit Tausch plus ein tauschfreier = 3."
+assert tuple(bubble_sort_zaehler([2, 1, 3, 4])) == ([1, 2, 3, 4], 2), "[2, 1, 3, 4]: ein Durchlauf mit Tausch plus ein tauschfreier = 2."
+assert tuple(bubble_sort_zaehler([7])) == ([7], 0), "Ein Element: 0 Durchläufe."
+assert tuple(bubble_sort_zaehler([])) == ([], 0), "Leere Liste: 0 Durchläufe."
+original = [3, 1, 2]
+bubble_sort_zaehler(original)
+assert original == [3, 1, 2], "Die übergebene Liste darf nicht verändert werden (sortiere eine Kopie)."
+`,
+        },
+        {
+          id: 'so5', level: 'Algorithmus', title: 'Merge Sort',
+          scenario: 'Die Produktpreise eines Shops wachsen auf Millionen Einträge — für Bubble Sort viel zu langsam. Jetzt kommt Divide & Conquer: Teilen, rekursiv sortieren, zusammenmischen.',
+          goal: 'Schreibe <code>merge_sort(liste)</code>. Sie gibt eine <strong>neue</strong>, aufsteigend sortierte Liste zurück (die Eingabe bleibt unverändert). Teile die Liste in der Mitte, sortiere beide Hälften <em>rekursiv</em> und mische sie zusammen, indem du immer das kleinere vordere Element nimmst. Basisfall: Listen mit 0 oder 1 Element sind schon sortiert. Kein <code>sorted()</code> / <code>.sort()</code>.',
+          hint: 'Basisfall: <code>if len(liste) &lt;= 1: return liste[:]</code>. Sonst <code>mitte = len(liste) // 2</code> und <code>links = merge_sort(liste[:mitte])</code>, <code>rechts = merge_sort(liste[mitte:])</code>. Beim Mischen laufen zwei Zeiger <code>i</code> und <code>j</code> durch <code>links</code> und <code>rechts</code>; am Ende hängst du den Rest an.',
+          starter: py`def merge_sort(liste):
+    pass
+`,
+          solution: py`def merge_sort(liste):
+    if len(liste) <= 1:
+        return liste[:]
+    mitte = len(liste) // 2
+    links = merge_sort(liste[:mitte])
+    rechts = merge_sort(liste[mitte:])
+    ergebnis = []
+    i = j = 0
+    while i < len(links) and j < len(rechts):
+        if links[i] <= rechts[j]:
+            ergebnis.append(links[i])
+            i += 1
+        else:
+            ergebnis.append(rechts[j])
+            j += 1
+    ergebnis.extend(links[i:])
+    ergebnis.extend(rechts[j:])
+    return ergebnis
+`,
+          tests: py`
+assert "sorted(" not in _source and ".sort(" not in _source, "Nutze weder sorted() noch .sort()."
+assert _source.count("merge_sort(") >= 3, "Merge Sort ruft sich für beide Hälften selbst auf."
+assert merge_sort([5, 2, 9, 1, 7, 3]) == [1, 2, 3, 5, 7, 9], "[5, 2, 9, 1, 7, 3] wird nicht korrekt sortiert."
+assert merge_sort([4, -2, 4, 0, -2]) == [-2, -2, 0, 4, 4], "Duplikate und negative Zahlen müssen stimmen."
+assert merge_sort([1, 2, 3, 4]) == [1, 2, 3, 4], "Schon sortierte Liste."
+assert merge_sort([4, 3, 2, 1]) == [1, 2, 3, 4], "Absteigende Liste."
+assert merge_sort([]) == [], "Leere Liste."
+assert merge_sort([42]) == [42], "Ein Element."
+original = [3, 1, 2]
+r = merge_sort(original)
+assert original == [3, 1, 2], "Die Eingabeliste darf nicht verändert werden."
+assert r is not original, "Gib eine neue Liste zurück."
+import random
+random.seed(7)
+daten = [random.randint(-50, 50) for _ in range(300)]
+assert merge_sort(daten) == sorted(daten), "Bei 300 Zufallszahlen weicht das Ergebnis vom korrekten ab."
+`,
+        },
+      ],
+
+      sandbox: py`# Sandbox — Sortieren
+zahlen = [6, 3, 8, 2, 7, 1, 5, 4]
+
+def bubble_sort(werte):
+    werte = list(werte)
+    for i in range(len(werte)):
+        for j in range(len(werte) - 1 - i):
+            if werte[j] > werte[j + 1]:
+                werte[j], werte[j + 1] = werte[j + 1], werte[j]
+    return werte
+
+print(bubble_sort(zahlen))
+print(sorted(zahlen, reverse=True))
+
+spieler = [("Mia", 120), ("Jan", 150), ("Zoe", 90)]
+print(sorted(spieler, key=lambda s: s[1], reverse=True))
+`,
+    },
+    /* ----------------------------------------------------------------- 15 */
+    {
+      id: 15, slug: 'bst', title: 'Binary Search Tree (BST)',
+      subtitle: 'links kleiner, rechts größer',
+      group: 'baum', icon: '⌥', status: 'ready',
+      scenario: 'Schnelle Produktsuche',
+      lead: 'In einem <strong>binären Suchbaum</strong> liegt alles Kleinere im linken, alles Größere im rechten Teilbaum. Bei jedem Knoten fällt die Hälfte der Kandidaten weg — eine Produktsuche mit einer Million Artikeln braucht so nur etwa 20 Vergleiche.',
+
+      scenes: [
+        {
+          id: 'suche',
+          title: 'Pfad durch den Baum',
+          blurb: 'Suche eine Zahl oder füge eine neue ein. Der Pfad von der Wurzel leuchtet auf: bei jedem Knoten geht es nach links oder rechts.',
+          visual: 'bstSearch',
+          config: {
+            values: [50, 30, 70, 20, 40, 60, 80, 35, 65],
+            examples: [40, 65, 45, 90],
+          },
+        },
+      ],
+
+      tasks: [
+        {
+          id: 'bs1', level: 'Init', title: 'Der Knoten',
+          scenario: 'Für die schnelle Produktsuche nach Artikelnummer baust du einen Suchbaum. Jeder Knoten braucht einen Wert und je einen Zeiger auf den linken und rechten Teilbaum.',
+          goal: 'Schreibe die Klasse <code>Knoten</code> mit <code>__init__(self, wert, links=None, rechts=None)</code>. Sie speichert die drei Werte als <code>self.wert</code>, <code>self.links</code> und <code>self.rechts</code>.',
+          hint: 'Wie bei der Linked List: <code>class Knoten:</code> mit <code>__init__</code>, in dem jedes Attribut mit <code>self.…  = …</code> gesetzt wird. <code>None</code> heißt: Hier gibt es keinen Teilbaum.',
+          starter: py`class Knoten:
+    pass
+`,
+          solution: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+`,
+          tests: py`
+k = Knoten(5)
+assert k.wert == 5, "Knoten muss den Wert in self.wert speichern."
+assert k.links is None and k.rechts is None, "Ohne Angabe sind links und rechts None."
+l, r = Knoten(3), Knoten(8)
+w = Knoten(5, l, r)
+assert w.links is l, "self.links muss auf den übergebenen linken Knoten zeigen."
+assert w.rechts is r, "self.rechts muss auf den übergebenen rechten Knoten zeigen."
+`,
+        },
+        {
+          id: 'bs2', level: 'Update', title: 'Wert einfügen',
+          scenario: 'Ein neuer Artikel kommt ins Sortiment. Seine Nummer muss an genau der richtigen Stelle im Suchbaum landen: kleiner → nach links, größer → nach rechts, bis ein freier Platz da ist.',
+          goal: 'Schreibe <code>einfuegen(wurzel, wert)</code>. Sie fügt <code>wert</code> in den Baum ein und gibt die Wurzel zurück. Ist der Baum leer (<code>wurzel</code> ist <code>None</code>), wird ein neuer Knoten zur Wurzel. Werte, die schon im Baum stehen, werden <strong>nicht</strong> noch einmal eingefügt.',
+          hint: 'Rekursiv: Ist <code>wurzel</code> <code>None</code> → <code>return Knoten(wert)</code>. Ist <code>wert &lt; wurzel.wert</code>, dann <code>wurzel.links = einfuegen(wurzel.links, wert)</code>, bei größerem Wert rechts. Am Ende <code>return wurzel</code>.',
+          starter: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def einfuegen(wurzel, wert):
+    pass
+`,
+          solution: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def einfuegen(wurzel, wert):
+    if wurzel is None:
+        return Knoten(wert)
+    if wert < wurzel.wert:
+        wurzel.links = einfuegen(wurzel.links, wert)
+    elif wert > wurzel.wert:
+        wurzel.rechts = einfuegen(wurzel.rechts, wert)
+    return wurzel
+`,
+          tests: py`
+w = None
+for v in [50, 30, 70, 20, 40, 60, 80]:
+    w = einfuegen(w, v)
+assert w is not None and w.wert == 50, "Der erste eingefügte Wert wird zur Wurzel."
+assert w.links.wert == 30 and w.rechts.wert == 70, "Kleinere Werte gehören nach links, größere nach rechts."
+assert w.links.links.wert == 20 and w.links.rechts.wert == 40, "Der linke Teilbaum stimmt nicht."
+assert w.rechts.links.wert == 60 and w.rechts.rechts.wert == 80, "Der rechte Teilbaum stimmt nicht."
+assert einfuegen(w, 65) is w, "einfuegen muss die Wurzel zurückgeben."
+assert w.rechts.links.rechts.wert == 65, "65 gehört rechts von 60."
+einfuegen(w, 40)
+assert w.links.rechts.links is None and w.links.rechts.rechts is None, "Duplikate werden nicht eingefügt."
+neu = einfuegen(None, 7)
+assert neu.wert == 7 and neu.links is None and neu.rechts is None, "In einen leeren Baum: ein einzelner Knoten."
+`,
+        },
+        {
+          id: 'bs3', level: 'Debugging', title: 'Die verirrte Suche',
+          scenario: 'Die Produktsuche findet Artikel, die im Baum stehen, einfach nicht — und gibt für fast alles False zurück. Die Suchfunktion biegt an jedem Knoten in die falsche Richtung ab.',
+          goal: 'Repariere <code>suche(wurzel, wert)</code>: Sie liefert <code>True</code>, wenn der Wert im Suchbaum steht, sonst <code>False</code>. Kleinere Werte stehen links, größere rechts.',
+          hint: 'Ist der gesuchte Wert <strong>kleiner</strong> als der aktuelle Knotenwert, muss die Suche im <em>linken</em> Teilbaum weitergehen — der Code geht aber nach rechts.',
+          starter: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def suche(wurzel, wert):
+    if wurzel is None:
+        return False
+    if wert == wurzel.wert:
+        return True
+    if wert < wurzel.wert:
+        return suche(wurzel.rechts, wert)
+    return suche(wurzel.links, wert)
+`,
+          solution: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def suche(wurzel, wert):
+    if wurzel is None:
+        return False
+    if wert == wurzel.wert:
+        return True
+    if wert < wurzel.wert:
+        return suche(wurzel.links, wert)
+    return suche(wurzel.rechts, wert)
+`,
+          tests: py`
+baum = Knoten(50, Knoten(30, Knoten(20), Knoten(40)), Knoten(70, Knoten(60), Knoten(80)))
+for v in (50, 30, 70, 20, 40, 60, 80):
+    assert suche(baum, v) is True, f"Der Wert {v} steht im Baum, wird aber nicht gefunden."
+for v in (10, 35, 55, 65, 90):
+    assert suche(baum, v) is False, f"Der Wert {v} steht nicht im Baum, die Suche meldet aber True."
+assert suche(None, 1) is False, "Im leeren Baum wird nichts gefunden."
+`,
+        },
+        {
+          id: 'bs4', level: 'Edge Case', title: 'Suchpfad',
+          scenario: 'Zum Debuggen der Suche will das Team sehen, <em>welche</em> Knoten besucht wurden. Der Baum kann leer sein — oder zu einer langen Kette entartet, wenn Artikelnummern aufsteigend eingefügt wurden.',
+          goal: 'Schreibe <code>finde_pfad(wurzel, wert)</code>. Sie gibt die Liste der besuchten Knotenwerte <strong>von der Wurzel bis zum gesuchten Wert</strong> zurück. Steht der Wert nicht im Baum (oder ist der Baum leer), ist das Ergebnis <code>None</code>.',
+          hint: 'Gehe iterativ oder rekursiv vor und merke dir bei jedem Knoten den Wert in einer Liste. Erreichst du <code>None</code>, ohne den Wert gefunden zu haben → <code>None</code> zurückgeben, nicht die halbe Liste.',
+          starter: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def finde_pfad(wurzel, wert):
+    pass
+`,
+          solution: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def finde_pfad(wurzel, wert):
+    pfad = []
+    aktuell = wurzel
+    while aktuell is not None:
+        pfad.append(aktuell.wert)
+        if wert == aktuell.wert:
+            return pfad
+        aktuell = aktuell.links if wert < aktuell.wert else aktuell.rechts
+    return None
+`,
+          tests: py`
+baum = Knoten(50, Knoten(30, Knoten(20), Knoten(40)), Knoten(70, Knoten(60), Knoten(80)))
+assert finde_pfad(baum, 50) == [50], "Die Wurzel selbst: Pfad [50]."
+assert finde_pfad(baum, 40) == [50, 30, 40], "Pfad zu 40: 50 → 30 → 40."
+assert finde_pfad(baum, 60) == [50, 70, 60], "Pfad zu 60: 50 → 70 → 60."
+assert finde_pfad(baum, 45) is None, "Nicht vorhandener Wert → None."
+assert finde_pfad(None, 1) is None, "Leerer Baum → None."
+kette = Knoten(1, None, Knoten(2, None, Knoten(3, None, Knoten(4))))
+assert finde_pfad(kette, 4) == [1, 2, 3, 4], "Einseitiger Baum: der Pfad geht komplett durch die Kette."
+assert finde_pfad(kette, 0) is None, "In der rechtsseitigen Kette ist 0 nicht vorhanden."
+assert finde_pfad(kette, 9) is None, "Am Kettenende darf nichts abstürzen."
+`,
+        },
+        {
+          id: 'bs5', level: 'Algorithmus', title: 'Ist das ein gültiger BST?',
+          scenario: 'Ein Import-Skript baut Bäume aus Fremddaten. Bevor die schnelle Suche darauf losgelassen wird, muss geprüft werden, ob es wirklich ein gültiger Suchbaum ist. Nur die direkten Kinder zu vergleichen reicht nicht!',
+          goal: 'Schreibe <code>ist_bst(wurzel)</code>. Ein Baum ist ein gültiger Suchbaum, wenn <strong>alle</strong> Werte im linken Teilbaum <em>kleiner</em> und alle im rechten <em>größer</em> als der Knoten sind — für jeden Knoten. Duplikate sind nicht erlaubt. Ein leerer Baum ist gültig.',
+          hint: 'Reiche beim rekursiven Abstieg Grenzen mit: <code>pruefe(knoten, untere, obere)</code>. Der Wert muss strikt zwischen <code>untere</code> und <code>obere</code> liegen (<code>None</code> = keine Grenze). Nach links wird <code>obere</code> zum Knotenwert, nach rechts <code>untere</code>.',
+          starter: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def ist_bst(wurzel):
+    pass
+`,
+          solution: py`class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def ist_bst(wurzel, untere=None, obere=None):
+    if wurzel is None:
+        return True
+    if untere is not None and wurzel.wert <= untere:
+        return False
+    if obere is not None and wurzel.wert >= obere:
+        return False
+    return (ist_bst(wurzel.links, untere, wurzel.wert)
+            and ist_bst(wurzel.rechts, wurzel.wert, obere))
+`,
+          tests: py`
+gueltig = Knoten(50, Knoten(30, Knoten(20), Knoten(40)), Knoten(70, Knoten(60), Knoten(80)))
+assert ist_bst(gueltig) is True, "Dieser Baum ist ein gültiger Suchbaum."
+assert ist_bst(None) is True, "Ein leerer Baum ist gültig."
+assert ist_bst(Knoten(5)) is True, "Ein einzelner Knoten ist gültig."
+falsch_kind = Knoten(10, Knoten(15), Knoten(20))
+assert ist_bst(falsch_kind) is False, "Das linke Kind 15 ist größer als 10."
+versteckt = Knoten(10, Knoten(5, None, Knoten(15)), Knoten(20))
+assert ist_bst(versteckt) is False, "15 steht links von 10, ist aber größer als 10 — das erkennst du nur mit Grenzen aus höheren Ebenen."
+versteckt2 = Knoten(10, Knoten(5), Knoten(20, Knoten(8), Knoten(30)))
+assert ist_bst(versteckt2) is False, "8 steht rechts von 10, ist aber kleiner als 10."
+dubletten = Knoten(10, Knoten(10), None)
+assert ist_bst(dubletten) is False, "Duplikate sind in diesem Suchbaum nicht erlaubt."
+assert ist_bst(Knoten(1, None, Knoten(2, None, Knoten(3)))) is True, "Eine gültige rechtsseitige Kette."
+`,
+        },
+      ],
+
+      sandbox: py`# Sandbox — Binary Search Tree
+class Knoten:
+    def __init__(self, wert, links=None, rechts=None):
+        self.wert = wert
+        self.links = links
+        self.rechts = rechts
+
+def einfuegen(wurzel, wert):
+    if wurzel is None:
+        return Knoten(wert)
+    if wert < wurzel.wert:
+        wurzel.links = einfuegen(wurzel.links, wert)
+    elif wert > wurzel.wert:
+        wurzel.rechts = einfuegen(wurzel.rechts, wert)
+    return wurzel
+
+def in_order(k):
+    return in_order(k.links) + [k.wert] + in_order(k.rechts) if k else []
+
+wurzel = None
+for v in [50, 30, 70, 20, 40, 60, 80]:
+    wurzel = einfuegen(wurzel, v)
+
+print(in_order(wurzel))   # aufsteigend sortiert!
+`,
+    },
     soon(16, 'traversierung', 'Baum-Traversierungen (In/Pre/Post)', 'baum',  '⌥→'),
     soon(17, 'graphen',       'Graphen',                        'baum',       '◎—◎'),
     soon(18, 'oop',           'Klassen & Objekte (OOP)',        'oop',        'cls'),

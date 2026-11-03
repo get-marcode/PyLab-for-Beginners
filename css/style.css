@@ -593,6 +593,47 @@ input[type='range'] { accent-color: var(--accent); width: 100%; }
 .venn-el.in { fill: #fff; font-weight: 600; }
 @keyframes vennIn { from { opacity: 0; } to { opacity: 1; } }
 
+/* ---------------------------------- 14e. Szenen: Themen 13–15 */
+/* Ordner-Explorer */
+.tree { display: grid; gap: 2px; font: 500 13.5px var(--mono); }
+.tree-row { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 8px; color: #6d7187; transition: background 0.25s, color 0.25s; }
+.tree-row.is-dir { color: var(--ink-2); font-weight: 600; }
+.tree-ico { width: 14px; color: var(--accent-soft); }
+.tree-row.is-done { color: var(--ink-2); }
+.tree-row.is-now { color: #fff; background: linear-gradient(90deg, rgba(255, 93, 0, 0.25), rgba(255, 93, 0, 0.03)); box-shadow: inset 2px 0 0 var(--accent); }
+.call-path { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 34px; }
+.call-path:empty::before { content: 'noch leer'; color: #4a4e63; font: 13px var(--mono); }
+.call-path .sep { color: var(--muted); }
+
+/* Sortier-Balken */
+.sort-bars { display: flex; align-items: flex-end; gap: 8px; height: 190px; margin-bottom: 36px; }
+.sbar { position: relative; flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.sbar i { display: block; width: 100%; border-radius: 8px 8px 3px 3px; background: rgba(255, 255, 255, 0.14); transition: height 0.35s cubic-bezier(0.3, 1.2, 0.5, 1), background 0.25s, box-shadow 0.25s; }
+.sbar span { position: absolute; bottom: -24px; left: 0; right: 0; text-align: center; font: 600 12.5px var(--mono); color: var(--muted); }
+.sbar.is-cmp i { background: var(--warn); box-shadow: 0 0 20px rgba(251, 191, 36, 0.55); }
+.sbar.is-swap i { background: var(--accent); box-shadow: 0 0 22px var(--accent-glow); }
+.sbar.is-merged i { background: var(--t-str); box-shadow: 0 0 18px rgba(94, 234, 212, 0.45); }
+.sbar.is-sorted i { background: var(--ok); box-shadow: 0 0 14px rgba(52, 211, 153, 0.4); }
+
+/* BST */
+.bst-wrap { overflow-x: auto; }
+.bst { display: block; width: 100%; height: auto; margin: 0 auto; }
+.bst-edge { stroke: #4d5168; stroke-width: 2; transition: stroke 0.3s; }
+.bst-edge.on { stroke: var(--accent); stroke-width: 3; filter: drop-shadow(0 0 5px var(--accent-glow)); }
+.bst-node circle { fill: #1d2030; stroke: #5b6079; stroke-width: 2; transition: fill 0.3s, stroke 0.3s; }
+.bst-node text { font: 600 14px var(--mono); fill: #d8dbea; }
+.bst-node.on circle { stroke: var(--accent); fill: rgba(255, 93, 0, 0.18); }
+.bst-node.cur circle { fill: var(--accent); stroke: #ffb27a; filter: drop-shadow(0 0 10px var(--accent-glow)); }
+.bst-node.cur text { fill: #140700; }
+.bst-node.found circle { fill: var(--ok); stroke: #8af0c8; filter: drop-shadow(0 0 10px rgba(52, 211, 153, 0.6)); }
+.bst-node.found text { fill: #04150e; }
+.bst-node.fresh { animation: pop 0.5s; transform-box: fill-box; transform-origin: center; }
+.bst-ghost { fill: none; stroke: var(--bad); stroke-width: 2; stroke-dasharray: 4 3; }
+.bst-none { font: 600 10px var(--mono); fill: #ff8a98; }
+.bst-log { display: grid; gap: 6px; min-height: 40px; font: 500 13px var(--mono); color: var(--ink-2); }
+.bst-log:empty::before { content: 'noch keine Suche'; color: #4a4e63; }
+.bst-log > div { animation: rise 0.25s both; }
+
 /* ------------------------------------------------------ 15. Responsive */
 @media (max-width: 1000px) {
   .icon-btn { display: grid; }

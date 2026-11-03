@@ -268,7 +268,7 @@ const Visuals = (() => {
   /* ---------------------------------------------------- 6. Szenen: Basis */
 
   /** Gemeinsame Bedienleiste: Schritt / Auto / Reset + Fortschrittsbalken. */
-  function controlBar({ total, onStep, onReset }) {
+  function controlBar({ total, onStep, onReset, interval = 1250 }) {
     let timer = null;
     let index = 0;
     const bar = h('i');
@@ -293,7 +293,7 @@ const Visuals = (() => {
       if (index >= total) reset();
       btnAuto.textContent = 'Pause';
       btnAuto.classList.add('is-on');
-      timer = setInterval(() => step(false), 1250);
+      timer = setInterval(() => step(false), interval);
       step(false);
     }
     function stopAuto() {
@@ -309,7 +309,7 @@ const Visuals = (() => {
       paint();
     }
     paint();
-    return { el, destroy: stopAuto, reset };
+    return { el, destroy: stopAuto, reset, setTotal(n) { total = n; paint(); } };
   }
 
   /** Fliegender Chip: animiert einen Wert von Quelle zu Ziel. */
@@ -1920,6 +1920,361 @@ const Visuals = (() => {
     );
     paint();
     return { destroy() {} };
+  };
+
+  /* ------------------------------------------------- Szene: Ordner-Explorer */
+
+  scenes.folderWalk = (root, cfg, ctx) => {
+    const rows = [];
+    (function walk(name, content, depth) {
+      const isDir = typeof content === 'object';
+      rows.push({ name, depth, isDir, size: isDir ? null : content });
+      if (isDir) Object.entries(content).forEach(([k, v]) => walk(k, v, depth + 1));
+    })('/ (Wurzel)', cfg.tree, 0);
+
+    const rowEls = rows.map((r) => h('div.tree-row' + (r.isDir ? '.is-dir' : ''), { style: { paddingLeft: 10 + r.depth * 22 + 'px' } },
+      h('span.tree-ico', r.isDir ? '▸' : '·'), r.name));
+    const treeEl = h('div.tree', rowEls);
+    const callPath = h('div.call-path');
+    const cntFiles = h('strong', '0');
+    const cntDepth = h('strong', '0');
+    const note = h('p.step-note', 'Drücke ▶ Schritt: Die Funktion besucht Eintrag für Eintrag — Ordner lösen einen neuen rekursiven Aufruf aus.');
+    const lines = [
+      'def dateien_zaehlen(ordner):',
+      '    anzahl = 0',
+      '    for inhalt in ordner.values():',
+      '        if isinstance(inhalt, dict):',
+      '            anzahl += dateien_zaehlen(inhalt)',
+      '        else:',
+      '            anzahl += 1',
+      '    return anzahl',
+    ];
+    const lineEls = lines.map((l, i) => h('div.code-line', h('span.ln', i + 1), h('span.src', { html: highlight(l) })));
+
+    let files = 0;
+    let maxDepth = 0;
+    let path = [];
+    const ctl = controlBar({
+      total: rows.length,
+      interval: 900,
+      onStep(i) {
+        ctx.touch();
+        const r = rows[i];
+        rowEls.forEach((e, j) => { e.classList.remove('is-now'); if (j < i) e.classList.add('is-done'); });
+        rowEls[i].classList.add('is-now');
+        path = path.slice(0, r.isDir ? r.depth : Math.max(0, r.depth));
+        if (r.isDir) path.push(r.name);
+        maxDepth = Math.max(maxDepth, r.depth + 1);
+        lineEls.forEach((l) => l.classList.remove('is-active'));
+        if (r.isDir) {
+          lineEls[4].classList.add('is-active');
+          note.innerHTML = `<strong>${r.name}</strong> ist ein Ordner → rekursiver Aufruf <code>dateien_zaehlen(inhalt)</code>. Der Stack wird eine Ebene tiefer (Tiefe ${r.depth + 1}).`;
+        } else {
+          files++;
+          lineEls[6].classList.add('is-active');
+          note.innerHTML = `<strong>${r.name}</strong> ist eine Datei → <code>anzahl += 1</code>. Kein weiterer Aufruf nötig (<em>Basisfall</em> dieses Zweigs).`;
+        }
+        cntFiles.textContent = files;
+        cntDepth.textContent = maxDepth;
+        callPath.replaceChildren(...path.flatMap((p, k) => [k ? h('span.sep', '→') : null, h('code', k === 0 ? 'dateien_zaehlen(wurzel)' : `dateien_zaehlen(${p})`)]).filter(Boolean));
+        if (i === rows.length - 1) note.innerHTML += ` Fertig: <strong>${files} Dateien</strong>, tiefste Ebene ${maxDepth}.`;
+      },
+      onReset() {
+        files = 0; maxDepth = 0; path = [];
+        rowEls.forEach((e) => e.classList.remove('is-now', 'is-done'));
+        lineEls.forEach((l) => l.classList.remove('is-active'));
+        cntFiles.textContent = '0';
+        cntDepth.textContent = '0';
+        callPath.replaceChildren();
+        note.textContent = 'Drücke ▶ Schritt: Die Funktion besucht Eintrag für Eintrag — Ordner lösen einen neuen rekursiven Aufruf aus.';
+      },
+    });
+
+    root.append(
+      h('div.scene-grid',
+        h('div.panel', h('div.panel-title', 'Ordnerbaum'), treeEl,
+          h('div.slots-meta.mt', h('span', 'Dateien gezählt: ', cntFiles), h('span', 'tiefste Ebene: ', cntDepth)),
+          h('div.panel-title.mt', 'Aufrufkette'), callPath),
+        h('div.panel.panel-code', h('div.panel-title', 'Code'), h('div.code-block', lineEls)),
+      ),
+      note, ctl.el,
+    );
+    return { destroy: ctl.destroy };
+  };
+
+  /* ------------------------------------------------- Szene: Sortier-Balken */
+
+  scenes.sortBars = (root, cfg, ctx) => {
+    const data = cfg.data;
+    const n = data.length;
+    const maxV = Math.max(...data);
+    let algo = 'bubble';
+    let events = [];
+
+    function genBubble() {
+      const a = [...data];
+      const ev = [];
+      let cmp = 0;
+      let swaps = 0;
+      let sortedFrom = n;
+      for (let i = 0; i < n - 1; i++) {
+        let swapped = false;
+        for (let j = 0; j < n - 1 - i; j++) {
+          cmp++;
+          ev.push({ t: 'cmp', i: j, j: j + 1, arr: [...a], sortedFrom, stats: [cmp, swaps],
+            note: `Vergleiche <code>${a[j]}</code> und <code>${a[j + 1]}</code>: ${a[j] > a[j + 1] ? 'linker ist größer → tauschen' : 'Reihenfolge stimmt → weiter'}.` });
+          if (a[j] > a[j + 1]) {
+            [a[j], a[j + 1]] = [a[j + 1], a[j]];
+            swaps++;
+            ev.push({ t: 'swap', i: j, j: j + 1, arr: [...a], sortedFrom, stats: [cmp, swaps], note: 'Getauscht: der größere Wert „blubbert“ nach rechts.' });
+            swapped = true;
+          }
+        }
+        sortedFrom = n - 1 - i;
+        ev.push({ t: 'pass', arr: [...a], sortedFrom, stats: [cmp, swaps],
+          note: swapped ? `Durchlauf ${i + 1} fertig: Der größte Wert sitzt ganz rechts.` : `Durchlauf ${i + 1} ohne Tausch — die Liste ist sortiert, früher Abbruch!` });
+        if (!swapped) { ev[ev.length - 1].sortedFrom = 0; break; }
+      }
+      ev.push({ t: 'done', arr: [...a], sortedFrom: 0, stats: [cmp, swaps], note: `<strong>Sortiert.</strong> ${cmp} Vergleiche und ${swaps} Tausche — bei großen Listen wächst das quadratisch (O(n²)).` });
+      return ev;
+    }
+    function genMerge() {
+      const a = [...data];
+      const ev = [];
+      let splits = 0;
+      let merges = 0;
+      (function ms(lo, hi) {
+        if (hi - lo < 2) return;
+        splits++;
+        ev.push({ t: 'split', lo, hi, arr: [...a], stats: [splits, merges], note: `Teilen: Bereich <code>[${lo}:${hi}]</code> hat ${hi - lo} Elemente und wird halbiert.` });
+        const mid = (lo + hi) >> 1;
+        ms(lo, mid);
+        ms(mid, hi);
+        const l = a.slice(lo, mid);
+        const r = a.slice(mid, hi);
+        const out = [];
+        let i = 0;
+        let j = 0;
+        while (i < l.length && j < r.length) out.push(l[i] <= r[j] ? l[i++] : r[j++]);
+        out.push(...l.slice(i), ...r.slice(j));
+        a.splice(lo, hi - lo, ...out);
+        merges++;
+        ev.push({ t: 'merge', lo, hi, arr: [...a], stats: [splits, merges], note: `Mischen: Die sortierten Hälften <code>[${l}]</code> und <code>[${r}]</code> werden zu <code>[${out}]</code> zusammengefügt.` });
+      })(0, n);
+      ev.push({ t: 'done', arr: [...a], lo: 0, hi: n, stats: [splits, merges], note: `<strong>Sortiert.</strong> ${splits} Teilungen, ${merges} Mischvorgänge — nur etwa n·log n Arbeit (O(n log n)).` });
+      return ev;
+    }
+    const gen = () => (events = algo === 'bubble' ? genBubble() : genMerge());
+
+    const bars = data.map((v) => h('div.sbar', h('i', { style: { height: (v / maxV) * 100 + '%' } }), h('span', v)));
+    const barsEl = h('div.sort-bars', bars);
+    const stat1 = h('strong', '0');
+    const stat2 = h('strong', '0');
+    const label1 = h('span');
+    const label2 = h('span');
+    const note = h('p.step-note');
+    const codeBox = h('pre.code-static');
+    const pills = h('div.scene-tabs');
+
+    const CODE = {
+      bubble: 'for i in range(n):\n    for j in range(n - 1 - i):\n        if liste[j] > liste[j + 1]:\n            liste[j], liste[j + 1] = liste[j + 1], liste[j]',
+      merge: 'def merge_sort(liste):\n    if len(liste) <= 1:\n        return liste\n    mitte = len(liste) // 2\n    links = merge_sort(liste[:mitte])\n    rechts = merge_sort(liste[mitte:])\n    return mische(links, rechts)',
+    };
+    function paintBars(arr, cls = {}) {
+      bars.forEach((b, k) => {
+        b.firstChild.style.height = (arr[k] / maxV) * 100 + '%';
+        b.lastChild.textContent = arr[k];
+        b.className = 'sbar' + (cls[k] ? ' ' + cls[k] : '');
+      });
+    }
+    function paintPills() {
+      pills.replaceChildren(...[['bubble', 'Bubble Sort'], ['merge', 'Merge Sort']].map(([id, label]) =>
+        h('button.pill' + (id === algo ? '.is-active' : ''), { onclick: () => { algo = id; paintPills(); gen(); ctl.setTotal(events.length); ctl.reset(); } }, label)));
+      codeBox.innerHTML = highlight(CODE[algo]);
+      label1.textContent = algo === 'bubble' ? 'Vergleiche: ' : 'Teilungen: ';
+      label2.textContent = algo === 'bubble' ? 'Tausche: ' : 'Mischvorgänge: ';
+    }
+    gen();
+
+    const ctl = controlBar({
+      total: events.length,
+      interval: 520,
+      onStep(i) {
+        ctx.touch();
+        const e = events[i];
+        const cls = {};
+        if (algo === 'bubble') {
+          for (let k = e.sortedFrom; k < n; k++) cls[k] = 'is-sorted';
+          if (e.t === 'cmp') cls[e.i] = cls[e.j] = 'is-cmp';
+          if (e.t === 'swap') cls[e.i] = cls[e.j] = 'is-swap';
+        } else if (e.t === 'split') {
+          for (let k = e.lo; k < e.hi; k++) cls[k] = 'is-cmp';
+        } else {
+          for (let k = e.lo; k < e.hi; k++) cls[k] = e.t === 'done' ? 'is-sorted' : 'is-merged';
+        }
+        paintBars(e.arr, cls);
+        stat1.textContent = e.stats[0];
+        stat2.textContent = e.stats[1];
+        note.innerHTML = e.note;
+      },
+      onReset() {
+        paintBars(data);
+        stat1.textContent = stat2.textContent = '0';
+        note.textContent = 'Drücke ▶ Schritt oder starte Auto-Play.';
+      },
+    });
+    ctl.reset();
+    paintPills();
+
+    root.append(
+      pills,
+      h('div.panel', h('div.panel-title', 'liste = [' + data.join(', ') + ']'), barsEl,
+        h('div.slots-meta', h('span', label1, stat1), h('span', label2, stat2))),
+      note, ctl.el,
+      h('div.panel', h('div.panel-title', 'Kernidee'), codeBox),
+    );
+    return { destroy: ctl.destroy };
+  };
+
+  /* ------------------------------------------------- Szene: BST-Suche */
+
+  scenes.bstSearch = (root, cfg, ctx) => {
+    const R = 20;
+    let tree = null;
+    let token = 0;
+    const insertNode = (node, v) => {
+      if (!node) return { v, l: null, r: null };
+      if (v < node.v) node.l = insertNode(node.l, v);
+      else if (v > node.v) node.r = insertNode(node.r, v);
+      return node;
+    };
+    const reset = () => { tree = null; cfg.values.forEach((v) => (tree = insertNode(tree, v))); };
+    reset();
+
+    const view = { path: new Set(), cur: null, found: null, ghost: null, fresh: null };
+    const svgEl = svg('svg', { class: 'bst', role: 'img', 'aria-label': 'Binärer Suchbaum' });
+    const log = h('div.bst-log');
+    const input = h('input.field', { type: 'number', placeholder: 'Zahl', 'aria-label': 'Zahl' });
+    const note = h('p.step-note', 'Wähle ein Beispiel oder tippe eine Zahl, dann „Suchen“ oder „Einfügen“.');
+
+    function layout() {
+      const list = [];
+      let idx = 0;
+      let maxD = 0;
+      (function go(node, d, parent) {
+        if (!node) return;
+        go(node.l, d + 1, node);
+        node.x = 36 + idx++ * 52;
+        node.y = 36 + d * 72;
+        node.d = d;
+        maxD = Math.max(maxD, d);
+        list.push(node);
+        go(node.r, d + 1, node);
+      })(tree, 0, null);
+      return { list, maxD, width: Math.max(1, idx) * 52 + 20 };
+    }
+    function draw() {
+      const { list, maxD, width } = layout();
+      const height = (maxD + 1) * 72 + (view.ghost ? 70 : 20);
+      svgEl.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      svgEl.style.maxWidth = Math.max(width, 320) + 'px';
+      svgEl.replaceChildren();
+      const edge = (a, b, cls) => svgEl.append(svg('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'bst-edge' + (cls ? ' ' + cls : '') }));
+      list.forEach((n) => {
+        if (n.l) edge(n, n.l, view.path.has(n.v) && view.path.has(n.l.v) ? 'on' : '');
+        if (n.r) edge(n, n.r, view.path.has(n.v) && view.path.has(n.r.v) ? 'on' : '');
+      });
+      if (view.ghost) {
+        const g = view.ghost;
+        const p = list.find((n) => n.v === g.parent);
+        const gx = p.x + (g.dir === 'l' ? -30 : 30);
+        const gy = p.y + 64;
+        edge(p, { x: gx, y: gy }, 'on');
+        svgEl.append(svg('circle', { cx: gx, cy: gy, r: 16, class: 'bst-ghost' }));
+        const t = svg('text', { x: gx, y: gy + 4, 'text-anchor': 'middle', class: 'bst-none' });
+        t.textContent = 'None';
+        svgEl.append(t);
+      }
+      list.forEach((n) => {
+        const cls = 'bst-node' + (view.path.has(n.v) ? ' on' : '') + (view.cur === n.v ? ' cur' : '') + (view.found === n.v ? ' found' : '') + (view.fresh === n.v ? ' fresh' : '');
+        const g = svg('g', { class: cls });
+        g.append(svg('circle', { cx: n.x, cy: n.y, r: R }));
+        const t = svg('text', { x: n.x, y: n.y + 5, 'text-anchor': 'middle' });
+        t.textContent = n.v;
+        g.append(t);
+        svgEl.append(g);
+      });
+    }
+    const clearView = () => { view.path = new Set(); view.cur = null; view.found = null; view.ghost = null; view.fresh = null; };
+    const sleep2 = (ms) => new Promise((r) => setTimeout(r, ms));
+    const addLog = (html) => { log.prepend(h('div', { html })); while (log.children.length > 6) log.lastChild.remove(); };
+
+    async function walk(q, insert) {
+      const mine = ++token;
+      ctx.touch();
+      clearView();
+      log.replaceChildren();
+      draw();
+      let node = tree;
+      let steps = 0;
+      if (!node) {
+        tree = insertNode(tree, q);
+        view.fresh = q; draw();
+        note.textContent = 'Der Baum war leer — der Wert wird zur Wurzel.';
+        return;
+      }
+      while (node) {
+        if (mine !== token) return;
+        view.cur = node.v;
+        view.path.add(node.v);
+        steps++;
+        draw();
+        if (q === node.v) {
+          view.found = node.v; view.cur = null; draw();
+          addLog(`<code>${q} == ${node.v}</code> → ${insert ? 'schon vorhanden (Duplikate werden nicht eingefügt)' : '<strong>gefunden!</strong>'}`);
+          note.innerHTML = insert
+            ? `<strong>${q}</strong> steht schon im Baum, es wird nichts eingefügt.`
+            : `<strong>${q}</strong> nach ${steps} Vergleich(en) gefunden — der Baum hat ${layout().list.length} Knoten.`;
+          return;
+        }
+        const left = q < node.v;
+        const next = left ? node.l : node.r;
+        addLog(`<code>${q} ${left ? '<' : '>'} ${node.v}</code> → nach ${left ? 'links' : 'rechts'}${next ? '' : ' — dort ist <strong>None</strong>'}`);
+        await sleep2(700);
+        if (!next) {
+          if (insert) {
+            if (left) node.l = { v: q, l: null, r: null }; else node.r = { v: q, l: null, r: null };
+            view.cur = null; view.fresh = q; view.path.add(q); draw();
+            note.innerHTML = `<strong>${q}</strong> wird nach ${steps} Vergleich(en) als ${left ? 'linkes' : 'rechtes'} Kind von <strong>${node.v}</strong> eingefügt: <code>${left ? 'links' : 'rechts'} = Knoten(${q})</code>.`;
+          } else {
+            view.cur = null; view.ghost = { parent: node.v, dir: left ? 'l' : 'r' }; draw();
+            note.innerHTML = `Nach ${steps} Vergleich(en) endet der Pfad bei <code>None</code> — <strong>${q}</strong> ist nicht im Baum.`;
+          }
+          return;
+        }
+        node = next;
+      }
+    }
+    const run = (insert) => {
+      const q = parseInt(input.value, 10);
+      if (Number.isNaN(q)) { note.textContent = 'Bitte eine ganze Zahl eingeben.'; return; }
+      walk(q, insert);
+    };
+
+    root.append(
+      h('div.panel',
+        h('div.panel-title', 'Beispiele'),
+        h('div.chip-row', cfg.examples.map((v) => h('button.pill', { onclick: () => { input.value = v; run(false); } }, String(v)))),
+        h('div.row-inline', input,
+          h('button.btn.btn-primary', { onclick: () => run(false) }, 'Suchen'),
+          h('button.btn.btn-ghost', { onclick: () => run(true) }, 'Einfügen'),
+          h('button.btn.btn-ghost', { onclick: () => { token++; reset(); clearView(); log.replaceChildren(); draw(); note.textContent = 'Baum zurückgesetzt.'; } }, '↺ Neu'))),
+      h('div.panel', h('div.panel-title', 'Suchbaum'), h('div.bst-wrap', svgEl)),
+      h('div.panel', h('div.panel-title', 'Vergleiche'), log),
+      note,
+    );
+    draw();
+    return { destroy() { token++; } };
   };
 
   /* ------------------------------------------------------------- Export */
