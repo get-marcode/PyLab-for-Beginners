@@ -35,6 +35,11 @@
     html[lang="de"] .legal [lang="de"], html[lang="en"] .legal [lang="en"] { display: block; }
     html[lang="de"] .legal li[lang="de"], html[lang="en"] .legal li[lang="en"] { display: list-item; }
     .legal .site-foot { margin-left: 0; padding: 40px 0 10px; }
+    .legal-logo { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 44px; color: var(--muted); font-size: 13px; }
+    .legal-logo img { width: 104px; height: 104px; display: block; }
+    .legal-logo .logo-light { display: none; }
+    html[data-mode='light'] .legal-logo .logo-light { display: block; }
+    html[data-mode='light'] .legal-logo .logo-dark { display: none; }
   </style>
 </head>
 <body>
@@ -105,6 +110,12 @@
 
       <h2>Your rights</h2>
       <p>You have the right of access, rectification, erasure, restriction of processing, data portability and objection under Articles 15 to 21 GDPR, and you can lodge a complaint with a data protection authority. As Marcode stores no personal data itself, requests about server logs usually concern GitHub.</p>
+    </div>
+
+    <div class="legal-logo">
+      <img class="logo-dark" src="assets/marcode-logo.png" alt="MarCode" width="104" height="104">
+      <img class="logo-light" src="assets/marcode-logo-light.png" alt="" width="104" height="104" aria-hidden="true">
+      <span>PyLab · Marcode</span>
     </div>
 
     <footer class="site-foot">

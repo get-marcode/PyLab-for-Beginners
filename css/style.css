@@ -131,10 +131,10 @@ input[type='range'] { accent-color: var(--accent); width: 100%; }
   box-shadow: 0 1px 0 rgba(var(--fg), 0.05), 0 12px 40px -20px #000;
 }
 .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--strong); }
-.brand-mark { width: 48px; height: 48px; display: block; object-fit: contain; border-radius: 50%; background: var(--code-bg); box-shadow: 0 0 0 1px rgba(var(--fg), 0.16), 0 6px 16px -8px rgba(0, 0, 0, 0.5); }
-.brand-mark.logo-light { display: none; }
-[data-mode='light'] .brand-mark.logo-light { display: block; }
-[data-mode='light'] .brand-mark.logo-dark { display: none; }
+.brand-mark { width: 48px; height: 48px; display: block; object-fit: contain; object-position: -999px 0; /* Bild selbst unsichtbar, die Form kommt als Maske */
+  background: var(--accent); -webkit-mask: url(../assets/marcode-logo.png) center / contain no-repeat; mask: url(../assets/marcode-logo.png) center / contain no-repeat;
+  filter: drop-shadow(0 0 8px rgba(var(--accent-rgb), 0.35)); transition: background 0.3s; }
+.brand-mark.logo-light { display: none !important; }
 .brand-name { font-weight: 700; font-size: 17px; letter-spacing: 0.02em; }
 .brand-tag { display: none; font: 500 12px var(--mono); color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; padding-left: 11px; border-left: 1px solid rgba(var(--fg), 0.1); }
 .crumbs { flex: 1; color: var(--muted); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
