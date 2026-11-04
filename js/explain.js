@@ -875,6 +875,7 @@ print("post:", postorder(home))`,
           ['Adjazenzliste', 'Ein Dictionary: Haltestelle → Liste der Nachbarn. <code>netz["Dom"] = ["Markt", "Zoo"]</code>.'],
           ['BFS (Breitensuche)', 'Arbeitet mit einer <strong>Warteschlange</strong>, besucht Ebene für Ebene und findet die kürzeste Route.'],
           ['DFS (Tiefensuche)', 'Arbeitet mit einem <strong>Stapel</strong> (oder Rekursion), geht erst tief und kehrt dann zurück. Findet eine Route, nicht unbedingt die kürzeste.'],
+          ['Adjazenzmatrix', 'Die Alternative zur Liste: eine Tabelle aus 1 und 0 („gibt es diese Kante?“). Zum Selbstbauen im Modul <strong>Graphen II</strong>.'],
         ],
         example: {
           code: py`from collections import deque
@@ -915,6 +916,7 @@ print(route("Hbf", "Zoo"))`,
           ['Adjacency list', 'A dictionary: stop → list of neighbours. <code>network["Dom"] = ["Market", "Zoo"]</code>.'],
           ['BFS (breadth-first)', 'Works with a <strong>queue</strong>, visits level by level and finds the shortest route.'],
           ['DFS (depth-first)', 'Works with a <strong>stack</strong> (or recursion), goes deep first and then returns. Finds a route, not necessarily the shortest.'],
+          ['Adjacency matrix', 'The alternative to the list: a table of 1s and 0s (“is there this edge?”). Build it yourself in the module <strong>Graphs II</strong>.'],
         ],
         example: {
           code: py`from collections import deque
@@ -1030,6 +1032,86 @@ print(devices[1].brightness)`,
           'The error <code>takes 0 positional arguments but 1 was given</code> = the method is missing <code>self</code>.',
         ],
         cheat: [['class A:', 'class'], ['def __init__(self, x):', 'constructor'], ['self.x = x', 'set an attribute'], ['class B(A):', 'inheritance'], ['super().__init__(x)', 'set up the base class']],
+      },
+    },
+
+    /* --------------------------------------------------------------- 19 */
+    19: {
+      de: {
+        analogy: 'Die <strong>Adjazenzmatrix</strong> ist die Tabelle „Wer kennt wen?“ aus lauter 1 und 0: Zeile = von, Spalte = nach. Ein Freundesnetz kann außerdem in mehrere <strong>Inseln</strong> zerfallen, die nichts voneinander wissen. Und ein <strong>Zyklus</strong> im Aufgabenplan ist wie zwei Leute, die jeweils darauf warten, dass der andere zuerst anfängt.',
+        terms: [
+          ['Adjazenzmatrix', 'Eine <code>n × n</code>-Tabelle als Liste aus Listen. <code>m[a][b] = 1</code>, wenn es eine Kante von a nach b gibt, sonst <code>0</code>.'],
+          ['Zeile und Spalte lesen', 'Zeile = <em>von</em>, Spalte = <em>nach</em>. Die Einsen einer Zeile sind die Nachbarn, ihre Summe ist der <strong>Grad</strong>.'],
+          ['Ungerichtet oder gerichtet', 'Ungerichtet: beide Zellen setzen, die Matrix ist symmetrisch. Gerichtet: nur <code>m[a][b]</code>, der Rückweg ist eine eigene Zelle.'],
+          ['Matrix oder Liste?', 'Die Matrix prüft eine Kante in einem Zugriff, braucht aber immer n² Felder. Die Liste speichert nur vorhandene Kanten und ist bei wenigen Kanten viel sparsamer.'],
+          ['Inseln (Zusammenhangskomponenten)', 'Alle Knoten, die voneinander aus erreichbar sind. Zählen: für jeden unbesuchten Knoten eine Suche starten.'],
+          ['Zyklus', 'Ungerichtet: ein besuchter Knoten, der nicht der Elternknoten ist. Gerichtet: ein <strong>grauer</strong> (noch in Arbeit befindlicher) Knoten bei der Drei-Farben-DFS.'],
+        ],
+        example: {
+          code: py`n = 4
+kanten = [(0, 1), (0, 2), (1, 3)]
+
+# Matrix bauen (ungerichtet: beide Richtungen setzen)
+matrix = [[0] * n for _ in range(n)]
+for a, b in kanten:
+    matrix[a][b] = 1
+    matrix[b][a] = 1
+
+print(matrix[0])            # [0, 1, 1, 0]  -> Zeile von Knoten 0
+print(matrix[0][3] == 1)    # Kante 0-3? -> False
+print(sum(matrix[0]))       # Grad von Knoten 0 -> 2
+
+# Matrix -> Adjazenzliste
+liste = {a: [b for b in range(n) if matrix[a][b]] for a in range(n)}
+print(liste)                # {0: [1, 2], 1: [0, 3], 2: [0], 3: [1]}`,
+          note: 'Probiere es im <strong>Matrix-Labor</strong> unter „Entdecken“ aus: Dort siehst du dieselbe Liste aus Listen live wachsen.',
+        },
+        pitfalls: [
+          '<code>[[0] * n] * n</code> erzeugt dieselbe Zeile n-mal. Nimm <code>[[0] * n for _ in range(n)]</code>.',
+          'Ungerichtet nur <code>m[a][b]</code> zu setzen macht die Matrix unsymmetrisch: <code>m[b][a]</code> gehört dazu.',
+          'Ohne <code>besucht</code>-Menge ruft sich die DFS bei einem Kreis endlos selbst auf (<code>RecursionError</code>).',
+          'Nur von einem Startknoten zu suchen übersieht weitere Inseln: Schleife über <strong>alle</strong> Knoten.',
+          'Ungerichtet: Die Kante zurück zum Elternknoten ist kein Kreis, sonst wäre jede Freundschaft einer.',
+        ],
+        cheat: [['[[0]*n for _ in range(n)]', 'Matrix, richtig'], ['m[a][b] = m[b][a] = 1', 'ungerichtete Kante'], ['sum(m[a])', 'Grad von a'], ['[b for b in range(n) if m[a][b]]', 'Nachbarn von a'], ['weiß · grau · schwarz', 'gerichteter Zyklus']],
+      },
+      en: {
+        analogy: 'The <strong>adjacency matrix</strong> is the “who knows whom?” table of 1s and 0s: row = from, column = to. A friend network can also fall apart into several <strong>islands</strong> that know nothing of each other. And a <strong>cycle</strong> in a task plan is like two people who each wait for the other to start first.',
+        terms: [
+          ['Adjacency matrix', 'An <code>n × n</code> table as a list of lists. <code>m[a][b] = 1</code> if there is an edge from a to b, otherwise <code>0</code>.'],
+          ['Reading row and column', 'Row = <em>from</em>, column = <em>to</em>. The ones in a row are the neighbours, their sum is the <strong>degree</strong>.'],
+          ['Undirected or directed', 'Undirected: set both cells, the matrix is symmetric. Directed: only <code>m[a][b]</code>, the way back is a cell of its own.'],
+          ['Matrix or list?', 'The matrix checks an edge in one access but always needs n² cells. The list stores only existing edges and is far more economical with few edges.'],
+          ['Islands (connected components)', 'All nodes that can reach each other. To count them, start a search from every unvisited node.'],
+          ['Cycle', 'Undirected: a visited node that is not the parent. Directed: a <strong>grey</strong> (still in progress) node during the three-colour DFS.'],
+        ],
+        example: {
+          code: py`n = 4
+edges = [(0, 1), (0, 2), (1, 3)]
+
+# build the matrix (undirected: set both directions)
+matrix = [[0] * n for _ in range(n)]
+for a, b in edges:
+    matrix[a][b] = 1
+    matrix[b][a] = 1
+
+print(matrix[0])            # [0, 1, 1, 0]  -> row of node 0
+print(matrix[0][3] == 1)    # edge 0-3? -> False
+print(sum(matrix[0]))       # degree of node 0 -> 2
+
+# matrix -> adjacency list
+lst = {a: [b for b in range(n) if matrix[a][b]] for a in range(n)}
+print(lst)                  # {0: [1, 2], 1: [0, 3], 2: [0], 3: [1]}`,
+          note: 'Try it in the <strong>matrix lab</strong> under “Discover”: there you watch the same list of lists grow live.',
+        },
+        pitfalls: [
+          '<code>[[0] * n] * n</code> creates the same row n times. Use <code>[[0] * n for _ in range(n)]</code>.',
+          'Setting only <code>m[a][b]</code> for an undirected edge makes the matrix asymmetric: <code>m[b][a]</code> belongs to it.',
+          'Without a visited set the DFS calls itself endlessly on a cycle (<code>RecursionError</code>).',
+          'Searching from one start node only misses further islands: loop over <strong>all</strong> nodes.',
+          'Undirected: the edge back to the parent is not a cycle, otherwise every friendship would be one.',
+        ],
+        cheat: [['[[0]*n for _ in range(n)]', 'matrix, done right'], ['m[a][b] = m[b][a] = 1', 'undirected edge'], ['sum(m[a])', 'degree of a'], ['[b for b in range(n) if m[a][b]]', 'neighbours of a'], ['white · grey · black', 'directed cycle']],
       },
     },
   };

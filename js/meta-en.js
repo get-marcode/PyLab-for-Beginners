@@ -134,7 +134,17 @@ const META = {
         title: 'Graphs', subtitle: 'Nodes, edges & routes', scenario: 'Public transport route planner',
         lead: 'A <strong>graph</strong> consists of <em>nodes</em> (stops) and <em>edges</em> (connections). Unlike a tree it may contain cycles and has no root. In Python you store it as an <strong>adjacency list</strong>: a dictionary that maps every stop to the list of its neighbours. <strong>BFS</strong> (level by level, finds the shortest route) and <strong>DFS</strong> (deep first, then back) run on top of it.',
         scenes: {
+          darstellung: { title: 'Matrix or list?', blurb: 'A graph can be stored in two ways. Click two nodes one after the other: the edge between them is switched on or off, and you see how the adjacency list and the adjacency matrix change at the same time. Compare below how much space each form needs. You can build the matrix yourself, also directed, in the module “Graphs II”.' },
           routen: { title: 'Find a route: BFS & DFS', blurb: 'Click the start stop first, then the destination. Choose BFS or DFS and watch how the search explores the network — in the end the route lights up. Tip: from Hbf to Park, BFS finds the short route while DFS takes a big detour — try both with the same start and goal.' },
+        },
+      },
+      19: {
+        title: 'Graphs II: matrix, islands & cycles', subtitle: 'Matrix, DFS, connectivity, loops', scenario: 'Friend network & task plan',
+        lead: 'Building on the graphs module: the <strong>adjacency matrix</strong> stores every possible edge as 0 or 1. With <strong>DFS</strong> (depth-first search) you count the <strong>islands</strong> of a network and detect <strong>cycles</strong>. In an undirected graph a cycle is a loop that is not just the way back to the parent. In a directed graph you colour the nodes <em>white</em> (new), <em>grey</em> (in progress) and <em>black</em> (finished): if you meet a grey node, it is a cycle.',
+        scenes: {
+          matrix: { title: 'Matrix lab', blurb: 'Here you build the adjacency matrix yourself. Click cells and watch the edge appear in the graph. Or click nodes and read off their row. Switch between undirected (symmetric) and directed (each direction on its own) and watch the Python code below grow along. This is exactly the list of lists you build in task 1.' },
+          zyklen: { title: 'Finding cycles with DFS', blurb: 'Choose one of the three graphs and press ▶ Step. Watch the colours: grey is the path the search is currently on. A cycle only appears when it meets a grey node. Black nodes are just a second way in. In the undirected graph, the way back to the parent does not count.' },
+          inseln: { title: 'Counting islands', blurb: 'A network can consist of several separate islands. Press ▶ Step: the search starts at every node not yet visited, colours its whole island in one colour and the counter goes up by one. Remember: the loop over all nodes matters, a single start is not enough.' },
         },
       },
       18: {

@@ -1178,3 +1178,42 @@ dl.terms dd { margin: 4px 0 0; padding-bottom: 12px; line-height: 1.6; color: va
 .mascot-bubble.is-in { opacity: 1; transform: translate(-50%, 0); }
 .mascot-bubble[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .mascot-bubble { transition: opacity 0.2s; transform: translate(-50%, 0); } }
+
+/* Graphen: Matrix, Farben für DFS und Inseln */
+.gr-matrix-wrap { overflow-x: auto; }
+.gr-matrix { border-collapse: separate; border-spacing: 3px; font: 500 13px var(--mono); margin: 0 auto; }
+.gr-matrix th { color: var(--muted); font-weight: 600; padding: 4px 8px; }
+.gr-matrix td { width: 34px; height: 30px; text-align: center; border-radius: 7px; color: var(--muted); background: rgba(var(--fg), 0.04); transition: background 0.3s, color 0.3s; }
+.gr-matrix td.on { color: var(--on-accent); background: var(--accent); font-weight: 700; }
+.gr-matrix td.hot { box-shadow: 0 0 0 2px var(--strong); }
+.gr-node.c-white circle { fill: var(--node-bg); stroke: #5b6079; }
+.gr-node.c-grey circle { fill: #8a8fa8; stroke: #c4c8d8; }
+.gr-node.c-grey text { fill: #0b0d16; }
+.gr-node.c-black circle { fill: #151826; stroke: var(--accent); }
+.gr-node.cur-ring circle { stroke: var(--accent-hi); stroke-width: 3.5; filter: drop-shadow(0 0 8px var(--accent-glow)); }
+.gr-node.cyc circle { stroke: var(--bad); stroke-width: 4; filter: drop-shadow(0 0 10px var(--bad)); }
+.gr-node.comp-0 circle { fill: rgba(var(--accent-rgb), 0.45); stroke: var(--accent); }
+.gr-node.comp-1 circle { fill: rgba(52, 211, 153, 0.4); stroke: var(--ok); }
+.gr-node.comp-2 circle { fill: rgba(125, 160, 255, 0.4); stroke: #7da0ff; }
+.gr-node.comp-3 circle { fill: rgba(240, 190, 80, 0.4); stroke: var(--warn); }
+.gr-node[class*='c-'], .gr-node[class*='comp-'] { cursor: default; }
+.gr-head { fill: #4d5168; }
+.gr-arrow.hot .gr-head { fill: var(--bad); }
+.gr-arrow .gr-edge.path { stroke: var(--bad); }
+.gr-legend { gap: 8px; margin-top: 8px; }
+.gr-key { font: 500 12px var(--mono); padding: 3px 10px; border-radius: 999px; box-shadow: var(--hair); color: var(--ink-2); }
+.gr-key.k-grey { background: #8a8fa8; color: #0b0d16; }
+.gr-key.k-black { background: #151826; color: var(--ink); box-shadow: inset 0 0 0 1px var(--accent); }
+.gr-counter { margin-top: 8px; font: 600 14px var(--mono); color: var(--strong); }
+.gr-counter:empty { display: none; }
+
+/* Matrix-Labor: klickbare Zellen */
+.gr-matrix.edit .mx-cell, .gr-matrix.edit .mx-head { all: unset; box-sizing: border-box; display: block; width: 100%; min-height: 30px; line-height: 30px; text-align: center; cursor: pointer; border-radius: 7px; }
+.gr-matrix.edit .mx-head { font-weight: 600; color: var(--muted); padding: 0 8px; }
+.gr-matrix.edit td { padding: 0; }
+.gr-matrix.edit td .mx-cell:hover { box-shadow: inset 0 0 0 2px var(--accent-soft); }
+.gr-matrix.edit .mx-cell:focus-visible, .gr-matrix.edit .mx-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.gr-matrix td.diag { color: var(--muted); opacity: 0.45; text-align: center; cursor: not-allowed; }
+.gr-matrix th.corner { font-size: 10px; font-weight: 500; white-space: nowrap; }
+.gr-matrix tr.sel td:not(.on) { background: rgba(var(--accent-rgb), 0.14); }
+.gr-matrix th.sel, .gr-matrix th.sel .mx-head { color: var(--accent-soft); }

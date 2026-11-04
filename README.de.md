@@ -8,14 +8,14 @@ Python läuft direkt im Browser (via [Pyodide](https://pyodide.org)), deine Lös
 
 ## Was drin steckt
 
-17 Module, vom ersten `print()` bis zu Graphen und Objektorientierung:
+18 Module, vom ersten `print()` bis zu Graphen und Objektorientierung:
 
 | Gruppe | Themen |
 |---|---|
 | Grundlagen | Variablen & Typen, Kontrollfluss, Funktionen & Scope, List Comprehensions |
 | Datenstrukturen | Listen, Tupel, Stack, Queue, verkettete Liste, Dictionary, Sets |
 | Algorithmen | Rekursion, Sortieren (Bubble / Merge) |
-| Bäume & Graphen | Binärer Suchbaum, Traversierungen, Graphen (BFS / DFS) |
+| Bäume & Graphen | Binärer Suchbaum, Traversierungen, Graphen (Matrix, BFS / DFS, Inseln, Zyklen) |
 | OOP | Klassen, Objekte, Vererbung |
 
 Jedes Modul hat vier Modi:

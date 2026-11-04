@@ -3046,6 +3046,16 @@ print("Postorder:", postorder(home))
 
       scenes: [
         {
+          id: 'darstellung',
+          title: 'Matrix oder Liste?',
+          blurb: 'Ein Graph lässt sich auf zwei Arten speichern. Klicke zwei Knoten nacheinander an: Die Kante dazwischen wird ein- oder ausgeschaltet, und du siehst, wie sich Adjazenzliste und Adjazenzmatrix gleichzeitig verändern. Vergleiche unten, wie viel Platz jede Form braucht. Die Matrix zum Selbstbauen, auch gerichtet, findest du im Modul „Graphen II“.',
+          visual: 'graphMatrix',
+          config: {
+            nodes: { A: [60, 115], B: [160, 40], C: [160, 190], D: [270, 115], E: [330, 190] },
+            edges: [['A', 'B'], ['A', 'C'], ['B', 'D'], ['C', 'D']],
+          },
+        },
+        {
           id: 'routen',
           title: 'Route suchen: BFS & DFS',
           blurb: 'Klicke erst die Starthaltestelle, dann das Ziel. Wähle BFS oder DFS und beobachte, wie die Suche das Netz erkundet — am Ende leuchtet die gefundene Route auf. Tipp: Von Hbf nach Park findet BFS die kurze Route, DFS macht einen großen Umweg — probiere beide mit demselben Start und Ziel.',
@@ -3643,6 +3653,309 @@ for g in geraete:
     print(g.status())
 
 print(geraete[1].helligkeit)
+`,
+    },
+    /* ----------------------------------------------------------------- 19 */
+    {
+      id: 19, slug: 'graphen2', title: 'Graphen II: Matrix, Inseln & Zyklen',
+      subtitle: 'Matrix, DFS, Zusammenhang, Kreise',
+      group: 'baum', icon: '◎⟲', status: 'ready',
+      scenario: 'Freundesnetz & Aufgabenplan',
+      lead: 'Aufbauend auf dem Graphen-Modul: Die <strong>Adjazenzmatrix</strong> speichert jede mögliche Kante als 0 oder 1. Mit <strong>DFS</strong> (Tiefensuche) zählst du die <strong>Inseln</strong> eines Netzes und erkennst <strong>Zyklen</strong>. Bei einem ungerichteten Graphen ist ein Zyklus ein Kreis, den du nicht über den Elternknoten zurückläufst. Bei einem gerichteten Graphen färbst du die Knoten <em>weiß</em> (neu), <em>grau</em> (in Arbeit) und <em>schwarz</em> (fertig): Triffst du auf einen grauen Knoten, ist es ein Zyklus.',
+
+      scenes: [
+        {
+          id: 'matrix',
+          title: 'Matrix-Labor',
+          blurb: 'Hier baust du die Adjazenzmatrix selbst. Klicke Zellen an und sieh, wie im Graphen die Kante entsteht. Oder klicke Knoten und lies ihre Zeile ab. Wechsle zwischen ungerichtet (symmetrisch) und gerichtet (jede Richtung einzeln) und beobachte, wie der Python-Code darunter mitwächst. Genau diese Liste aus Listen baust du in Aufgabe 1.',
+          visual: 'matrixLab',
+          config: { n: 4, max: 6, edges: [[0, 1], [0, 2], [1, 3]] },
+        },
+        {
+          id: 'zyklen',
+          title: 'Zyklen finden mit DFS',
+          blurb: 'Wähle einen der drei Graphen und drücke ▶ Schritt. Beobachte die Farben: Grau ist der Weg, auf dem die Suche gerade steckt. Ein Zyklus entsteht erst, wenn sie auf einen grauen Knoten trifft. Schwarze Knoten sind nur eine zweite Zufahrt. Im ungerichteten Graphen fällt dagegen der Weg zurück zum Elternknoten nicht ins Gewicht.',
+          visual: 'graphTrace',
+          config: {
+            mode: 'cycle',
+            graphs: [
+              {
+                label: 'vis.cy.lab1', directed: false,
+                nodes: { A: [60, 140], B: [170, 60], C: [170, 220], D: [300, 140], E: [410, 140], F: [490, 140] },
+                edges: [['A', 'B'], ['A', 'C'], ['B', 'D'], ['C', 'D'], ['D', 'E'], ['E', 'F']],
+              },
+              {
+                label: 'vis.cy.lab2', directed: true,
+                nodes: { A: [60, 140], B: [190, 60], C: [190, 220], D: [330, 140], E: [470, 140] },
+                edges: [['A', 'B'], ['A', 'C'], ['B', 'D'], ['C', 'D'], ['D', 'E']],
+              },
+              {
+                label: 'vis.cy.lab3', directed: true,
+                nodes: { A: [60, 150], B: [190, 150], C: [310, 60], D: [430, 150], E: [490, 240] },
+                edges: [['A', 'B'], ['B', 'C'], ['C', 'D'], ['D', 'B'], ['D', 'E']],
+              },
+            ],
+          },
+        },
+        {
+          id: 'inseln',
+          title: 'Inseln zählen',
+          blurb: 'Ein Netz kann aus mehreren getrennten Inseln bestehen. Drücke ▶ Schritt: Die Suche startet bei jedem noch unbesuchten Knoten, färbt dessen ganze Insel in einer Farbe und der Zähler geht um eins hoch. Merke dir: Die Schleife über alle Knoten ist wichtig, ein einziger Start reicht nicht.',
+          visual: 'graphTrace',
+          config: {
+            mode: 'islands',
+            graphs: [
+              {
+                label: 'vis.is.title', directed: false,
+                nodes: { A: [70, 70], B: [180, 50], C: [120, 190], D: [290, 80], E: [400, 60], F: [350, 190], G: [450, 190], H: [500, 120] },
+                edges: [['A', 'B'], ['B', 'C'], ['A', 'C'], ['D', 'E'], ['E', 'F'], ['G', 'H']],
+              },
+            ],
+          },
+        },
+      ],
+
+      tasks: [
+        {
+          id: 'n1', level: 'Init', title: 'Die Adjazenzmatrix bauen',
+          scenario: 'Eine kleine Plattform speichert, wer mit wem befreundet ist. Die Personen sind von <code>0</code> bis <code>n-1</code> durchnummeriert. Eine Freundschaft gilt in beide Richtungen.',
+          goal: 'Schreibe <code>matrix_aus_kanten(n, kanten)</code>. <code>kanten</code> ist eine Liste von Paaren wie <code>(0, 1)</code>. Rückgabe: eine <code>n × n</code>-Matrix aus Listen, in der <code>matrix[a][b]</code> und <code>matrix[b][a]</code> die <code>1</code> enthalten, sonst <code>0</code>. Ohne Kanten besteht sie nur aus Nullen.',
+          hint: 'Achtung Falle: <code>[[0] * n] * n</code> erzeugt <em>dieselbe</em> Zeile n-mal. Wenn du eine Zelle änderst, ändern sich alle Zeilen. Besser: <code>[[0] * n for _ in range(n)]</code>. Danach setzt du pro Kante beide Zellen auf 1.',
+          starter: py`def matrix_aus_kanten(n, kanten):
+    matrix = []
+    return matrix
+`,
+          solution: py`def matrix_aus_kanten(n, kanten):
+    matrix = [[0] * n for _ in range(n)]
+    for a, b in kanten:
+        matrix[a][b] = 1
+        matrix[b][a] = 1
+    return matrix
+`,
+          tests: py`
+m = matrix_aus_kanten(4, [(0, 1), (1, 2), (2, 3)])
+assert m == [[0, 1, 0, 0], [1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0]], "Für die Kanten (0,1), (1,2), (2,3) sieht die Matrix anders aus. Denk an beide Richtungen."
+assert matrix_aus_kanten(3, []) == [[0, 0, 0], [0, 0, 0], [0, 0, 0]], "Ohne Kanten besteht die Matrix nur aus Nullen."
+assert matrix_aus_kanten(0, []) == [], "Bei n = 0 gibt es keine Zeilen."
+m = matrix_aus_kanten(3, [(0, 1)])
+assert m[0] is not m[1] and m[1] is not m[2], "Alle Zeilen sind dasselbe Listenobjekt. Baue sie mit einer Schleife oder List Comprehension, nicht mit [[0] * n] * n."
+assert m[2] == [0, 0, 0], "Zeile 2 hat keine Kante und muss aus Nullen bestehen."
+assert matrix_aus_kanten(2, [(0, 1), (1, 0)]) == [[0, 1], [1, 0]], "Dieselbe Kante in beide Richtungen angegeben bleibt eine Kante mit Einsen."
+`,
+        },
+        {
+          id: 'n2', level: 'Update', title: 'Inseln im Netz zählen',
+          scenario: 'Das Freundesnetz ist in Gruppen zerfallen, die nichts voneinander wissen. Du sollst herausfinden, aus wie vielen getrennten Gruppen („Inseln“) es besteht. Auch jemand ganz ohne Freunde ist eine eigene Insel.',
+          goal: 'Schreibe <code>zaehle_inseln(netz)</code> mit einem Dictionary <code>Person → Liste der Freunde</code>. Rückgabe: die Anzahl der Zusammenhangskomponenten. Ein leeres Netz hat <code>0</code> Inseln.',
+          hint: 'Gehe alle Personen durch. Ist eine noch nicht in <code>besucht</code>, hast du eine neue Insel gefunden: Zähler hoch, dann alle erreichbaren Personen per Stapel (<code>pop()</code>) oder BFS als besucht markieren. Die äußere Schleife über <em>alle</em> Schlüssel ist der Kern.',
+          starter: py`def zaehle_inseln(netz):
+    besucht = set()
+    inseln = 0
+    # Schleife über alle Personen:
+    #   noch nicht besucht? -> neue Insel, Zähler erhöhen
+    #   dann alle von dort erreichbaren Personen als besucht markieren
+    return inseln
+`,
+          solution: py`def zaehle_inseln(netz):
+    besucht = set()
+    inseln = 0
+    for start in netz:
+        if start in besucht:
+            continue
+        inseln += 1
+        besucht.add(start)
+        stapel = [start]
+        while stapel:
+            person = stapel.pop()
+            for freund in netz[person]:
+                if freund not in besucht:
+                    besucht.add(freund)
+                    stapel.append(freund)
+    return inseln
+`,
+          tests: py`
+assert zaehle_inseln({}) == 0, "Ein leeres Netz hat keine Inseln."
+assert zaehle_inseln({"A": []}) == 1, "Eine einzelne Person ohne Freunde ist eine Insel."
+netz = {"A": ["B"], "B": ["A", "C"], "C": ["B"], "D": ["E"], "E": ["D"], "F": []}
+assert zaehle_inseln(netz) == 3, "Es gibt drei Inseln: A-B-C, D-E und F allein."
+ring = {1: [2, 4], 2: [1, 3], 3: [2, 4], 4: [3, 1]}
+assert zaehle_inseln(ring) == 1, "Ein Ring hängt zusammen: eine Insel. Ohne besucht-Menge würdest du endlos kreisen."
+assert zaehle_inseln({"A": [], "B": [], "C": []}) == 3, "Drei Personen ohne jede Verbindung sind drei Inseln."
+`,
+        },
+        {
+          id: 'n3', level: 'Debugging', title: 'Die endlose Tiefensuche',
+          scenario: 'Die Funktion soll die Personen in Tiefensuche-Reihenfolge ausgeben. Sie läuft aber bei jedem Netz, in dem Freunde sich gegenseitig kennen, in eine Endlosrekursion, und Python bricht mit einem Fehler ab.',
+          goal: 'Repariere <code>dfs_reihenfolge(netz, start, besucht=None)</code>: Sie gibt die Liste der besuchten Personen in DFS-Reihenfolge zurück. Die Nachbarn werden in der Reihenfolge der Liste durchsucht, jede Person kommt nur einmal vor.',
+          hint: 'Freunde verweisen aufeinander: A kennt B und B kennt A. Prüfe vor dem rekursiven Aufruf, ob der Nachbar schon in <code>besucht</code> steht: <code>if nachbar not in besucht:</code>.',
+          starter: py`def dfs_reihenfolge(netz, start, besucht=None):
+    if besucht is None:
+        besucht = []
+    besucht.append(start)
+    for nachbar in netz[start]:
+        dfs_reihenfolge(netz, nachbar, besucht)
+    return besucht
+`,
+          solution: py`def dfs_reihenfolge(netz, start, besucht=None):
+    if besucht is None:
+        besucht = []
+    besucht.append(start)
+    for nachbar in netz[start]:
+        if nachbar not in besucht:
+            dfs_reihenfolge(netz, nachbar, besucht)
+    return besucht
+`,
+          tests: py`
+netz = {"A": ["B", "C"], "B": ["A", "D"], "C": ["A", "D"], "D": ["B", "C"]}
+try:
+    r = dfs_reihenfolge(netz, "A")
+except RecursionError:
+    assert False, "Endlosrekursion: A ruft B auf, B ruft wieder A auf und so weiter. Prüfe vor dem Aufruf, ob der Nachbar schon besucht ist."
+assert r == ["A", "B", "D", "C"], "Erwartet wird die Tiefensuche A, B, D, C: erst tief über B nach D, dann zurück zu C."
+assert dfs_reihenfolge({"X": []}, "X") == ["X"], "Eine einzelne Person ohne Freunde ergibt nur diese Person."
+dreieck = {"A": ["B", "C"], "B": ["A", "C"], "C": ["A", "B"]}
+assert dfs_reihenfolge(dreieck, "A") == ["A", "B", "C"], "Im Dreieck kommt jede Person genau einmal vor: A, B, C."
+assert dfs_reihenfolge({"A": ["B"], "B": ["A"], "C": []}, "A") == ["A", "B"], "C ist nicht von A aus erreichbar und kommt nicht vor."
+`,
+        },
+        {
+          id: 'n4', level: 'Edge Case', title: 'Kreis im Freundesnetz?',
+          scenario: 'Du willst wissen, ob im Netz jemand über andere wieder bei sich selbst ankommt. Der erste Entwurf meldet bei jeder einfachen Freundschaft „Kreis“, stürzt bei leerem Netz ab und prüft nur die erste Gruppe.',
+          goal: 'Repariere <code>hat_kreis(netz)</code> für einen <strong>ungerichteten</strong> Graphen: <code>True</code>, wenn irgendwo ein Kreis steckt, sonst <code>False</code>. Der Weg zurück zum Elternknoten zählt nicht als Kreis. Es müssen <em>alle</em> Inseln geprüft werden, ein leeres Netz ist kreisfrei. Eine Person, die sich selbst als Freund hat, zählt als Kreis.',
+          hint: 'Gib der Hilfsfunktion den Elternknoten mit: <code>suche(knoten, eltern)</code>. Beim Nachbarn <code>eltern</code> machst du <code>continue</code>. Ist ein anderer Nachbar schon besucht, ist es ein Kreis. Außen startest du bei <em>jedem</em> noch unbesuchten Knoten: <code>for start in netz</code>.',
+          starter: py`def hat_kreis(netz):
+    besucht = set()
+
+    def suche(knoten):
+        besucht.add(knoten)
+        for nachbar in netz[knoten]:
+            if nachbar in besucht:
+                return True
+            if suche(nachbar):
+                return True
+        return False
+
+    return suche(next(iter(netz)))
+`,
+          solution: py`def hat_kreis(netz):
+    besucht = set()
+
+    def suche(knoten, eltern):
+        besucht.add(knoten)
+        for nachbar in netz[knoten]:
+            if nachbar == eltern:
+                continue
+            if nachbar in besucht:
+                return True
+            if suche(nachbar, knoten):
+                return True
+        return False
+
+    for start in netz:
+        if start not in besucht and suche(start, None):
+            return True
+    return False
+`,
+          tests: py`
+assert hat_kreis({}) is False, "Ein leeres Netz hat keinen Kreis (und darf nicht abstürzen)."
+assert hat_kreis({"A": []}) is False, "Eine einzelne Person ohne Freunde: kein Kreis."
+pfad = {"A": ["B"], "B": ["A", "C"], "C": ["B"]}
+assert hat_kreis(pfad) is False, "Ein einfacher Pfad A-B-C hat keinen Kreis. Der Weg zurück zum Elternknoten zählt nicht."
+dreieck = {"A": ["B", "C"], "B": ["A", "C"], "C": ["A", "B"]}
+assert hat_kreis(dreieck) is True, "A, B und C kennen sich gegenseitig: das ist ein Kreis."
+zwei = {"A": ["B"], "B": ["A"], "X": ["Y", "Z"], "Y": ["X", "Z"], "Z": ["X", "Y"]}
+assert hat_kreis(zwei) is True, "Der Kreis steckt in der zweiten Insel (X, Y, Z). Prüfe von jedem unbesuchten Knoten aus."
+stern = {"M": ["A", "B", "C"], "A": ["M"], "B": ["M"], "C": ["M"]}
+assert hat_kreis(stern) is False, "Ein Stern ist ein Baum und hat keinen Kreis."
+assert hat_kreis({"A": ["A"]}) is True, "Wer sich selbst als Freund hat, bildet einen Kreis der Länge 1."
+`,
+        },
+        {
+          id: 'n5', level: 'Algorithmus', title: 'Zyklus im Aufgabenplan',
+          scenario: 'Im Aufgabenplan zeigt ein Pfeil <code>A → B</code>: „A muss vor B erledigt sein“. Gibt es einen Zyklus, wartet jede Aufgabe auf eine andere und nichts kann je beginnen (Deadlock). Du prüfst den Plan mit der Drei-Farben-DFS aus der Szene.',
+          goal: 'Schreibe <code>hat_zyklus(graph)</code> für einen <strong>gerichteten</strong> Graphen (Dictionary <code>Aufgabe → Liste der Aufgaben, die danach kommen</code>). <code>True</code>, wenn ein Zyklus existiert, sonst <code>False</code>. Aufgaben, die nur als Ziel vorkommen und keinen eigenen Schlüssel haben, sind erlaubt.',
+          hint: 'Drei Zustände: <em>weiß</em> (noch nicht im Dictionary <code>farbe</code>), <em>grau</em> (in Arbeit), <em>schwarz</em> (fertig). Beim Betreten wird ein Knoten grau, nach allen Nachbarn schwarz. Triffst du auf einen <strong>grauen</strong> Nachbarn, ist es ein Zyklus. Ein <em>schwarzer</em> Nachbar ist harmlos (zweiter Zugang). Für Knoten ohne Schlüssel: <code>graph.get(knoten, [])</code>.',
+          starter: py`def hat_zyklus(graph):
+    WEISS, GRAU, SCHWARZ = 0, 1, 2
+    farbe = {}
+
+    def suche(knoten):
+        # 1. knoten grau färben
+        # 2. für jeden Nachbarn (graph.get(knoten, [])):
+        #      grau   -> Zyklus gefunden, return True
+        #      weiß   -> rekursiv weitersuchen
+        #      schwarz -> ignorieren
+        # 3. knoten schwarz färben, return False
+        return False
+
+    for start in graph:
+        if farbe.get(start, WEISS) == WEISS and suche(start):
+            return True
+    return False
+`,
+          solution: py`def hat_zyklus(graph):
+    WEISS, GRAU, SCHWARZ = 0, 1, 2
+    farbe = {}
+
+    def suche(knoten):
+        farbe[knoten] = GRAU
+        for nachbar in graph.get(knoten, []):
+            zustand = farbe.get(nachbar, WEISS)
+            if zustand == GRAU:
+                return True
+            if zustand == WEISS and suche(nachbar):
+                return True
+        farbe[knoten] = SCHWARZ
+        return False
+
+    for start in graph:
+        if farbe.get(start, WEISS) == WEISS and suche(start):
+            return True
+    return False
+`,
+          tests: py`
+assert hat_zyklus({}) is False, "Ein leerer Plan hat keinen Zyklus."
+plan = {"Planen": ["Bauen"], "Bauen": ["Testen"], "Testen": ["Release"]}
+assert hat_zyklus(plan) is False, "Eine gerade Kette hat keinen Zyklus. Release hat keinen eigenen Schlüssel: graph.get(knoten, [])."
+deadlock = {"A": ["B"], "B": ["C"], "C": ["A"]}
+assert hat_zyklus(deadlock) is True, "A wartet auf B, B auf C, C auf A: Zyklus."
+raute = {"A": ["B", "C"], "B": ["D"], "C": ["D"], "D": []}
+assert hat_zyklus(raute) is False, "D wird von B und C erreicht. Ein schwarzer (fertiger) Knoten ist kein Zyklus, nur ein zweiter Zugang."
+assert hat_zyklus({"A": ["A"]}) is True, "Eine Aufgabe, die auf sich selbst wartet, ist ein Zyklus."
+spaeter = {"A": ["B"], "B": [], "X": ["Y"], "Y": ["X"]}
+assert hat_zyklus(spaeter) is True, "Der Zyklus steckt in der zweiten Gruppe (X, Y). Starte von jedem unbesuchten Knoten."
+assert hat_zyklus({"A": ["B"], "B": ["C"]}) is False, "C kommt nur als Ziel vor. Das darf keinen KeyError geben."
+`,
+        },
+      ],
+
+      sandbox: py`# Sandbox — Graphen II
+netz = {
+    "A": ["B", "C"],
+    "B": ["A", "D"],
+    "C": ["A", "D"],
+    "D": ["B", "C"],
+    "X": ["Y"],
+    "Y": ["X"],
+}
+
+def inseln(netz):
+    besucht, anzahl = set(), 0
+    for start in netz:
+        if start in besucht:
+            continue
+        anzahl += 1
+        stapel = [start]
+        besucht.add(start)
+        while stapel:
+            k = stapel.pop()
+            for n in netz[k]:
+                if n not in besucht:
+                    besucht.add(n)
+                    stapel.append(n)
+    return anzahl
+
+print(inseln(netz))   # 2 Inseln
 `,
     },
   ],

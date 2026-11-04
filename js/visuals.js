@@ -2602,6 +2602,438 @@ const Visuals = (() => {
     return { destroy: ctl.destroy };
   };
 
+  /* ------------------------- Szene: Matrix oder Liste? (Graphen) */
+
+  scenes.graphMatrix = (root, cfg, ctx) => {
+    const names = Object.keys(cfg.nodes);
+    const edges = new Set(cfg.edges.map(([a, b]) => [a, b].sort().join('|')));
+    let first = null;
+    let flash = null;
+    const key = (a, b) => [a, b].sort().join('|');
+    const has = (a, b) => edges.has(key(a, b));
+    const nbrs = (n) => names.filter((m) => m !== n && has(n, m));
+
+    const svgEl = svg('svg', { class: 'gr', viewBox: '0 0 360 230', role: 'img', 'aria-label': I18n.t('vis.mx.aria') });
+    const listEl = h('pre.gr-adj');
+    const matrixEl = h('div.gr-matrix-wrap');
+    const costEl = h('p.step-note');
+    const noteEl = h('p.step-note');
+
+    function drawGraph() {
+      svgEl.replaceChildren();
+      names.forEach((a, i) => names.slice(i + 1).forEach((b) => {
+        if (!has(a, b)) return;
+        const [x1, y1] = cfg.nodes[a];
+        const [x2, y2] = cfg.nodes[b];
+        svgEl.append(svg('line', { x1, y1, x2, y2, class: 'gr-edge' + (flash === key(a, b) ? ' path' : '') }));
+      }));
+      names.forEach((n) => {
+        const [x, y] = cfg.nodes[n];
+        const g = svg('g', { class: 'gr-node' + (first === n ? ' cur' : ''), tabindex: 0, role: 'button', 'aria-label': I18n.t('vis.node') + ' ' + n });
+        g.append(svg('circle', { cx: x, cy: y, r: 17 }));
+        const t = svg('text', { x, y: y + 4, 'text-anchor': 'middle', class: 'gr-mark' });
+        t.textContent = n;
+        g.append(t);
+        g.addEventListener('click', () => pick(n));
+        g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(n); } });
+        svgEl.append(g);
+      });
+    }
+
+    function drawTables() {
+      listEl.textContent = 'graph = {\n' + names.map((n) => `    "${n}": [${nbrs(n).map((x) => `"${x}"`).join(', ')}],`).join('\n') + '\n}';
+      const head = h('tr', h('th'), names.map((n) => h('th', n)));
+      const rows = names.map((a) => h('tr', h('th', a), names.map((b) => {
+        const on = a !== b && has(a, b);
+        const hot = flash && (key(a, b) === flash);
+        return h('td' + (on ? '.on' : '') + (hot ? '.hot' : ''), on ? '1' : '0');
+      })));
+      matrixEl.replaceChildren(h('table.gr-matrix', h('thead', head), h('tbody', rows)));
+      const n = names.length;
+      const entries = names.reduce((s, x) => s + nbrs(x).length, 0);
+      costEl.innerHTML = I18n.t('vis.mx.cost', { cells: n * n, ones: entries, entries });
+    }
+
+    function pick(n) {
+      ctx.touch();
+      if (!first) { first = n; flash = null; noteEl.innerHTML = I18n.t('vis.mx.second', { a: n }); }
+      else if (first === n) { first = null; noteEl.innerHTML = I18n.t('vis.mx.pick'); }
+      else {
+        const k = key(first, n);
+        const added = !edges.has(k);
+        if (added) edges.add(k); else edges.delete(k);
+        flash = k;
+        noteEl.innerHTML = I18n.t(added ? 'vis.mx.added' : 'vis.mx.removed', { a: first, b: n });
+        first = null;
+      }
+      drawGraph();
+      drawTables();
+    }
+
+    noteEl.innerHTML = I18n.t('vis.mx.pick');
+    root.append(
+      h('div.panel', h('div.panel-title', I18n.t('vis.mx.graph')), h('div.bst-wrap', svgEl)),
+      noteEl,
+      h('div.scene-grid',
+        h('div.panel.panel-code', h('div.panel-title', I18n.t('vis.mx.list')), listEl),
+        h('div.panel', h('div.panel-title', I18n.t('vis.mx.matrix')), matrixEl)),
+      costEl,
+    );
+    drawGraph();
+    drawTables();
+    return { destroy() {} };
+  };
+
+  /* ---------------- Szene: Matrix-Labor (Graphen II) */
+
+  scenes.matrixLab = (root, cfg, ctx) => {
+    const MAX = cfg.max || 6;
+    const MIN = 3;
+    const LET = 'ABCDEF';
+    let n = cfg.n || 4;
+    let directed = false;
+    let sel = null;
+    let hot = null;
+    const m = Array.from({ length: MAX }, () => Array(MAX).fill(0));
+    (cfg.edges || []).forEach(([a, b]) => { m[a][b] = 1; m[b][a] = 1; });
+
+    const svgEl = svg('svg', { class: 'gr', viewBox: '0 0 360 240', role: 'img', 'aria-label': I18n.t('vis.ml.aria') });
+    const tableWrap = h('div.gr-matrix-wrap');
+    const codeEl = h('pre.gr-adj');
+    const note = h('p.step-note');
+    const modeBtns = {
+      u: h('button.pill', { onclick: () => setMode(false) }, I18n.t('vis.ml.undirected')),
+      d: h('button.pill', { onclick: () => setMode(true) }, I18n.t('vis.ml.directed')),
+    };
+    const btnMore = h('button.btn.btn-ghost', { onclick: () => resize(1) }, I18n.t('vis.ml.addNode'));
+    const btnLess = h('button.btn.btn-ghost', { onclick: () => resize(-1) }, I18n.t('vis.ml.removeNode'));
+    const btnClear = h('button.btn.btn-ghost', { onclick: clear }, I18n.t('vis.ml.clear'));
+
+    const pos = (i) => {
+      const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
+      return [180 + 88 * Math.cos(a), 120 + 88 * Math.sin(a)];
+    };
+    const has = (a, b) => m[a][b] === 1;
+    const R = 17;
+
+    function edgeEl(a, b) {
+      const [x1, y1] = pos(a);
+      const [x2, y2] = pos(b);
+      const isHot = hot && ((hot[0] === a && hot[1] === b) || (!directed && hot[0] === b && hot[1] === a));
+      if (!directed) return svg('line', { x1, y1, x2, y2, class: 'gr-edge' + (isHot ? ' path' : '') });
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len;
+      const uy = dy / len;
+      const off = has(b, a) ? 6 : 0;
+      const px = -uy * off;
+      const py = ux * off;
+      const sx = x1 + ux * R + px;
+      const sy = y1 + uy * R + py;
+      const ex = x2 - ux * (R + 2) + px;
+      const ey = y2 - uy * (R + 2) + py;
+      const g = svg('g', { class: 'gr-arrow' + (isHot ? ' hot' : '') });
+      g.append(svg('line', { x1: sx, y1: sy, x2: ex, y2: ey, class: 'gr-edge' + (isHot ? ' path' : '') }));
+      g.append(svg('path', { d: `M${ex} ${ey} L${ex - ux * 10 - uy * 5} ${ey - uy * 10 + ux * 5} L${ex - ux * 10 + uy * 5} ${ey - uy * 10 - ux * 5} Z`, class: 'gr-head' }));
+      return g;
+    }
+
+    function drawGraph() {
+      svgEl.replaceChildren();
+      for (let a = 0; a < n; a++) {
+        for (let b = 0; b < n; b++) {
+          if (a === b || !has(a, b)) continue;
+          if (!directed && b < a) continue;
+          svgEl.append(edgeEl(a, b));
+        }
+      }
+      for (let i = 0; i < n; i++) {
+        const [x, y] = pos(i);
+        const g = svg('g', { class: 'gr-node' + (sel === i ? ' cur' : ''), tabindex: 0, role: 'button', 'aria-label': I18n.t('vis.node') + ' ' + LET[i] });
+        g.append(svg('circle', { cx: x, cy: y, r: R }));
+        const t = svg('text', { x, y: y + 4, 'text-anchor': 'middle', class: 'gr-mark' });
+        t.textContent = LET[i];
+        g.append(t);
+        g.addEventListener('click', () => select(i));
+        g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(i); } });
+        svgEl.append(g);
+      }
+    }
+
+    function drawTable() {
+      const head = h('tr', h('th.corner', directed ? I18n.t('vis.ml.fromTo') : ''), Array.from({ length: n }, (_, j) => h('th' + (sel === j ? '.sel' : ''), LET[j])));
+      const rows = Array.from({ length: n }, (_, a) => h('tr' + (sel === a ? '.sel' : ''),
+        h('th' + (sel === a ? '.sel' : ''), h('button.mx-head', { type: 'button', onclick: () => select(a) }, LET[a])),
+        Array.from({ length: n }, (_, b) => {
+          if (a === b) return h('td.diag', { title: I18n.t('vis.ml.diag') }, '–');
+          const on = has(a, b);
+          const isHot = hot && hot[0] === a && hot[1] === b;
+          return h('td' + (on ? '.on' : '') + (isHot ? '.hot' : ''),
+            h('button.mx-cell', { type: 'button', 'aria-label': `m[${a}][${b}] = ${on ? 1 : 0}`, onclick: () => toggle(a, b) }, on ? '1' : '0'));
+        })));
+      tableWrap.replaceChildren(h('table.gr-matrix.edit', h('thead', head), h('tbody', rows)));
+    }
+
+    function drawCode() {
+      const rows = Array.from({ length: n }, (_, a) => '    [' + Array.from({ length: n }, (_, b) => m[a][b]).join(', ') + '],   # ' + LET[a]);
+      codeEl.textContent = 'matrix = [\n' + rows.join('\n') + '\n]';
+    }
+
+    function info() {
+      if (sel !== null) {
+        const out = Array.from({ length: n }, (_, j) => j).filter((j) => j !== sel && has(sel, j)).map((j) => LET[j]);
+        if (directed) {
+          const inn = Array.from({ length: n }, (_, j) => j).filter((j) => j !== sel && has(j, sel)).map((j) => LET[j]);
+          note.innerHTML = I18n.t('vis.ml.infoDir', { a: LET[sel], out: out.join(', ') || '–', outN: out.length, inn: inn.join(', ') || '–', inN: inn.length });
+        } else {
+          note.innerHTML = I18n.t('vis.ml.infoUndir', { a: LET[sel], list: out.join(', ') || '–', deg: out.length });
+        }
+        return;
+      }
+      if (hot) {
+        const [a, b] = hot;
+        const v = has(a, b) ? 1 : 0;
+        note.innerHTML = I18n.t(directed ? 'vis.ml.cellDir' : 'vis.ml.cellUndir', { a: LET[a], b: LET[b], ia: a, ib: b, v });
+        return;
+      }
+      note.innerHTML = I18n.t('vis.ml.intro');
+    }
+
+    function paint() {
+      Object.keys(modeBtns).forEach((k) => modeBtns[k].classList.toggle('is-active', (k === 'd') === directed));
+      btnMore.disabled = n >= MAX;
+      btnLess.disabled = n <= MIN;
+      drawGraph();
+      drawTable();
+      drawCode();
+      info();
+    }
+
+    function toggle(a, b) {
+      ctx.touch();
+      const v = has(a, b) ? 0 : 1;
+      m[a][b] = v;
+      if (!directed) m[b][a] = v;
+      hot = [a, b];
+      sel = null;
+      paint();
+    }
+    function select(i) {
+      ctx.touch();
+      sel = sel === i ? null : i;
+      hot = null;
+      paint();
+    }
+    function setMode(d) {
+      if (d === directed) return;
+      ctx.touch();
+      directed = d;
+      if (!d) {
+        for (let a = 0; a < MAX; a++) for (let b = 0; b < a; b++) { const v = m[a][b] | m[b][a]; m[a][b] = v; m[b][a] = v; }
+        hot = null;
+      }
+      paint();
+    }
+    function resize(delta) {
+      ctx.touch();
+      n = Math.max(MIN, Math.min(MAX, n + delta));
+      if (sel !== null && sel >= n) sel = null;
+      if (hot && (hot[0] >= n || hot[1] >= n)) hot = null;
+      for (let a = 0; a < MAX; a++) for (let b = 0; b < MAX; b++) if (a >= n || b >= n) m[a][b] = 0;
+      paint();
+    }
+    function clear() {
+      ctx.touch();
+      m.forEach((row) => row.fill(0));
+      sel = null;
+      hot = null;
+      paint();
+    }
+
+    root.append(
+      h('div.panel', h('div.chip-row', modeBtns.u, modeBtns.d, btnMore, btnLess, btnClear)),
+      h('div.scene-grid',
+        h('div.panel', h('div.panel-title', I18n.t('vis.ml.graph')), h('div.bst-wrap', svgEl)),
+        h('div.panel', h('div.panel-title', I18n.t('vis.ml.matrix')), tableWrap)),
+      note,
+      h('div.panel.panel-code', h('div.panel-title', I18n.t('vis.ml.code')), codeEl),
+    );
+    paint();
+    return { destroy() {} };
+  };
+
+  /* ---------- Szene: Zyklen & Inseln per DFS (Graphen, Teil 2) */
+
+  scenes.graphTrace = (root, cfg, ctx) => {
+    const mode = cfg.mode; // 'cycle' | 'islands'
+    let gi = 0;
+    let snaps = [];
+    const R = 17;
+
+    const svgEl = svg('svg', { class: 'gr', viewBox: '0 0 540 280', role: 'img', 'aria-label': I18n.t('vis.tr.aria') });
+    const note = h('p.step-note');
+    const legend = h('div.chip-row.gr-legend');
+    const picker = h('div.chip-row');
+    const counter = h('div.gr-counter');
+    const graph = () => cfg.graphs[gi];
+    const adjOf = (g) => {
+      const adj = {};
+      Object.keys(g.nodes).forEach((n) => (adj[n] = []));
+      g.edges.forEach(([a, b]) => { adj[a].push(b); if (!g.directed) adj[b].push(a); });
+      return adj;
+    };
+
+    function traceCycle(g) {
+      const adj = adjOf(g);
+      const color = {};
+      Object.keys(g.nodes).forEach((n) => (color[n] = 'white'));
+      const res = [];
+      let found = false;
+      const snap = (cur, msg, hot) => res.push({ color: { ...color }, cur, msg, hot: hot || null });
+      const visit = (u, parent) => {
+        color[u] = 'grey';
+        snap(u, I18n.t('vis.cy.enter', { n: u }));
+        for (const v of adj[u]) {
+          if (found) return;
+          if (!g.directed && v === parent) { snap(u, I18n.t('vis.cy.skipParent', { n: v })); continue; }
+          if (color[v] === 'grey' || (!g.directed && color[v] !== 'white')) {
+            found = true;
+            snap(u, I18n.t(g.directed ? 'vis.cy.back' : 'vis.cy.backU', { a: u, b: v }), [u, v]);
+            return;
+          }
+          if (color[v] === 'black') { snap(u, I18n.t('vis.cy.black', { a: u, b: v }), [u, v]); continue; }
+          visit(v, u);
+        }
+        if (found) return;
+        color[u] = 'black';
+        snap(u, I18n.t('vis.cy.leave', { n: u }));
+      };
+      for (const n of Object.keys(g.nodes)) {
+        if (found) break;
+        if (color[n] === 'white') {
+          if (res.length) snap(n, I18n.t('vis.cy.start', { n }));
+          visit(n, null);
+        }
+      }
+      if (!found) res.push({ color: { ...color }, cur: null, msg: I18n.t('vis.cy.none'), hot: null, end: 'none' });
+      else res[res.length - 1].end = 'cycle';
+      return res;
+    }
+
+    function traceIslands(g) {
+      const adj = adjOf(g);
+      const comp = {};
+      const res = [];
+      let k = 0;
+      Object.keys(g.nodes).forEach((n) => {
+        if (comp[n] !== undefined) return;
+        k++;
+        comp[n] = k - 1;
+        res.push({ comp: { ...comp }, cur: n, count: k, msg: I18n.t('vis.is.new', { n, k }) });
+        const st = [n];
+        while (st.length) {
+          const u = st.pop();
+          adj[u].forEach((v) => {
+            if (comp[v] === undefined) {
+              comp[v] = k - 1;
+              st.push(v);
+              res.push({ comp: { ...comp }, cur: v, count: k, msg: I18n.t('vis.is.visit', { n: v, k }) });
+            }
+          });
+        }
+      });
+      res.push({ comp: { ...comp }, cur: null, count: k, msg: I18n.t('vis.is.done', { k }), end: true });
+      return res;
+    }
+
+    function arrow(x1, y1, x2, y2, cls) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len;
+      const uy = dy / len;
+      const sx = x1 + ux * R;
+      const sy = y1 + uy * R;
+      const ex = x2 - ux * (R + 2);
+      const ey = y2 - uy * (R + 2);
+      const px = -uy;
+      const py = ux;
+      const g = svg('g', { class: 'gr-arrow ' + cls });
+      g.append(svg('line', { x1: sx, y1: sy, x2: ex, y2: ey, class: 'gr-edge' + (cls.includes('hot') ? ' path' : '') }));
+      g.append(svg('path', { d: `M${ex} ${ey} L${ex - ux * 10 + px * 5} ${ey - uy * 10 + py * 5} L${ex - ux * 10 - px * 5} ${ey - uy * 10 - py * 5} Z`, class: 'gr-head' }));
+      return g;
+    }
+
+    function draw(s) {
+      const g = graph();
+      svgEl.replaceChildren();
+      g.edges.forEach(([a, b]) => {
+        const [x1, y1] = g.nodes[a];
+        const [x2, y2] = g.nodes[b];
+        const hot = s && s.hot && s.hot[0] === a && s.hot[1] === b;
+        if (g.directed) svgEl.append(arrow(x1, y1, x2, y2, hot ? 'hot' : ''));
+        else svgEl.append(svg('line', { x1, y1, x2, y2, class: 'gr-edge' + (s && s.hot && s.hot.includes(a) && s.hot.includes(b) ? ' path' : '') }));
+      });
+      Object.keys(g.nodes).forEach((n) => {
+        const [x, y] = g.nodes[n];
+        let cls = 'gr-node';
+        if (mode === 'cycle') cls += ' c-' + (s ? s.color[n] : 'white');
+        else cls += s && s.comp[n] !== undefined ? ' comp-' + (s.comp[n] % 4) : ' c-white';
+        if (s && s.cur === n) cls += ' cur-ring';
+        if (s && s.end === 'cycle' && s.hot && s.hot.includes(n)) cls += ' cyc';
+        const el = svg('g', { class: cls });
+        el.append(svg('circle', { cx: x, cy: y, r: R }));
+        const t = svg('text', { x, y: y + 4, 'text-anchor': 'middle', class: 'gr-mark' });
+        t.textContent = n;
+        el.append(t);
+        svgEl.append(el);
+      });
+    }
+
+    const ctl = controlBar({
+      total: 0,
+      interval: 1100,
+      onStep(i) {
+        ctx.touch();
+        const s = snaps[i];
+        draw(s);
+        note.innerHTML = s.msg;
+        if (mode === 'islands') counter.textContent = I18n.t('vis.is.counter', { k: s.count });
+      },
+      onReset() {
+        draw(null);
+        note.innerHTML = I18n.t(mode === 'cycle' ? 'vis.cy.intro' : 'vis.is.intro');
+        counter.textContent = mode === 'islands' ? I18n.t('vis.is.counter', { k: 0 }) : '';
+      },
+    });
+
+    function select(i) {
+      gi = i;
+      [...picker.children].forEach((b, j) => b.classList.toggle('is-active', j === i));
+      snaps = mode === 'cycle' ? traceCycle(graph()) : traceIslands(graph());
+      ctl.setTotal(snaps.length);
+      ctl.reset();
+    }
+
+    cfg.graphs.forEach((g, i) => picker.append(h('button.pill', { onclick: () => select(i) }, I18n.t(g.label))));
+    if (mode === 'cycle') {
+      legend.append(
+        h('span.gr-key.k-white', I18n.t('vis.cy.white')),
+        h('span.gr-key.k-grey', I18n.t('vis.cy.grey')),
+        h('span.gr-key.k-black', I18n.t('vis.cy.black2')),
+      );
+    }
+
+    root.append(
+      cfg.graphs.length > 1 ? h('div.panel', h('div.panel-title', I18n.t('vis.tr.pick')), picker) : '',
+      h('div.panel', h('div.panel-title', I18n.t(mode === 'cycle' ? 'vis.cy.title' : 'vis.is.title')), h('div.bst-wrap', svgEl), legend, counter),
+      note, ctl.el,
+    );
+    select(0);
+    return { destroy: ctl.destroy };
+  };
+
   /* ------------------------------------- Szene: Klassen & Objekte */
 
   scenes.objectMemory = (root, cfg, ctx) => {

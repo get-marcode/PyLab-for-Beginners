@@ -8,14 +8,14 @@ Python runs right in your browser (via [Pyodide](https://pyodide.org)), and your
 
 ## What's inside
 
-17 modules, from the first `print()` to graphs and object-oriented programming:
+18 modules, from the first `print()` to graphs and object-oriented programming:
 
 | Group | Topics |
 |---|---|
 | Basics | Variables & types, control flow, functions & scope, list comprehensions |
 | Data structures | Lists, tuples, stack, queue, linked list, dictionary, sets |
 | Algorithms | Recursion, sorting (bubble / merge) |
-| Trees & graphs | Binary search tree, traversals, graphs (BFS / DFS) |
+| Trees & graphs | Binary search tree, traversals, graphs (matrix, BFS / DFS, islands, cycles) |
 | OOP | Classes, objects, inheritance |
 
 Every module has four modes:
