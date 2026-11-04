@@ -106,6 +106,8 @@ const PyLabTimer = (() => {
   const selBreak = select([3, 5, 10, 15].map((n) => [n, `${n} ${t('timer.min')}`]), st.breakMin, (v) => { st.breakMin = v; save(); }, t('timer.breakLen'));
   const chkRemind = h('input', { type: 'checkbox', id: 'timerRemind', onchange: (e) => { st.remind = e.target.checked; due = false; save(); paint(); } });
   chkRemind.checked = st.remind;
+  const chkMascot = h('input', { type: 'checkbox', id: 'mascotOn', onchange: (e) => PyLabMascot.set(e.target.checked) });
+  chkMascot.checked = typeof PyLabMascot !== 'undefined' && PyLabMascot.enabled !== false;
 
   const pop = h('div.timer-pop', { role: 'dialog', 'aria-label': t('timer.title'), hidden: true },
     h('div.menu-label', t('timer.heading')),
@@ -115,6 +117,7 @@ const PyLabTimer = (() => {
     btnBreak,
     h('div.timer-set',
       h('label', { for: 'timerRemind' }, chkRemind, ' ' + t('timer.remind')),
+      typeof PyLabMascot !== 'undefined' && PyLabMascot.set && h('label', { for: 'mascotOn' }, chkMascot, ' ' + t('mascot.show')),
       h('label', t('timer.remindAfter') + ' ', selInterval),
       h('label', t('timer.breakLen') + ' ', selBreak)),
     h('button.timer-link', { type: 'button', onclick: () => { if (confirm(t('timer.resetConfirm'))) { st.days[dayKey()] = 0; save(); paint(); } } }, t('timer.resetToday')),

@@ -33,6 +33,8 @@
     <div class="crumbs" id="crumbs"></div>
     <div class="topbar-right">
       <div class="timer-wrap" id="timerWrap"></div>
+      <button class="icon-btn more-btn" id="moreBtn" type="button" aria-expanded="false" aria-controls="topExtra" data-i18n-aria="a11y.more" aria-label="More">⋯</button>
+      <div class="topbar-extra" id="topExtra">
       <div class="theme-wrap">
         <button class="theme-btn lang-btn" id="langBtn" type="button" aria-haspopup="menu" aria-expanded="false"><span>DE</span></button>
         <div class="theme-menu" id="langMenu" role="menu" hidden></div>
@@ -45,6 +47,7 @@
       </div>
       <div class="py-status" id="pyStatus" data-state="loading"><i></i><span data-i18n="py.loading">Loading Python …</span></div>
       <div id="topRing" data-i18n-title="a11y.progress" title="Overall progress"></div>
+      </div>
     </div>
   </header>
 
@@ -69,6 +72,7 @@
   <script src="js/content.js"></script>
   <script src="js/content-en.js"></script>
   <script src="js/visuals.js"></script>
+  <script src="js/mascot.js"></script>
   <script src="js/timer.js"></script>
   <script src="js/app.js"></script>
 </body>

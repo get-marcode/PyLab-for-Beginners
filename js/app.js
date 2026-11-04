@@ -586,6 +586,7 @@ builtins.input = _pylab_input
         if (!r.ok) {
           ui.fails[draftKey]++;
           syncSolutionBtn();
+          window.dispatchEvent(new CustomEvent('pylab:task', { detail: { ok: false } }));
           feedback.replaceChildren(h('div.banner.bad', t('train.codeError')));
           return;
         }
@@ -594,6 +595,7 @@ builtins.input = _pylab_input
           paintRail();
           refreshChrome();
           Visuals.burst(btnCheck);
+          window.dispatchEvent(new CustomEvent('pylab:task', { detail: { ok: true } }));
           const last = idx === topic.tasks.length - 1;
           feedback.replaceChildren(h('div.banner.ok',
             h('div', t('train.passed')),
@@ -603,6 +605,7 @@ builtins.input = _pylab_input
         }
         ui.fails[draftKey]++;
         syncSolutionBtn();
+        window.dispatchEvent(new CustomEvent('pylab:task', { detail: { ok: false } }));
         const msg = (r.test && r.test.message) || '';
         const text = msg.startsWith('AssertionError: ') ? msg.slice(16)
           : msg === 'AssertionError' ? t('train.edge')
