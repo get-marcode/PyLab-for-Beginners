@@ -63,6 +63,71 @@ const PyLabMascot = (() => {
   btn.append(root);
   (slot.closest('.topbar') || slot).append(btn);
 
+
+  /* ------------------------------------------------------- Sprüche */
+  /* Kurz, freundlich, ohne Druck. Jede Gruppe wird gemischt, damit sich nichts direkt wiederholt. */
+  const SAY = {
+    de: {
+      win: ['Sauber gelöst!', 'Das saß!', 'Läuft wie geschmiert.', 'Bug? Welcher Bug?', 'Du wirst richtig gut.', 'Ich bin beeindruckt.', 'Noch einer im Kasten.', 'So macht das Spaß.'],
+      fail: ['Fehler sind nur Hinweise.', 'Fast! Lies die Meldung genau.', 'Jeder Bug lehrt dich was.', 'Kurz durchatmen, nochmal.', 'Ich glaub an dich.', 'Den Fehler finden wir.', 'Das kriegst du hin.'],
+      start: ['Los geht’s!', 'Ich bin bereit.', 'Zeit für Python.', 'Na dann, auf geht’s.'],
+      back: ['Da bist du ja wieder!', 'Willkommen zurück!', 'Ich hab gewartet.'],
+      rest: ['Pause! Trink einen Schluck.', 'Streck dich kurz.', 'Augen mal weg vom Bildschirm.'],
+      sleep: ['Bis gleich …', 'Ich döse kurz.'],
+      poke: ['Hallo!', 'Na, alles gut?', 'Beep!', 'Ich bin hier, falls was ist.', 'Du schaffst das.', 'Kleiner Tipp: print() ist dein Freund.', 'Fehlermeldungen sind keine Feinde.'],
+    },
+    en: {
+      win: ['Nicely done!', 'Nailed it!', 'Smooth as butter.', 'Bug? What bug?', 'You’re getting good.', 'I’m impressed.', 'Another one down.', 'This is fun.'],
+      fail: ['Errors are just hints.', 'Close! Read the message.', 'Every bug teaches you.', 'Deep breath, try again.', 'I believe in you.', 'We’ll find it.', 'You’ve got this.'],
+      start: ['Let’s go!', 'Ready when you are.', 'Python time.', 'Alright, here we go.'],
+      back: ['There you are!', 'Welcome back!', 'I was waiting.'],
+      rest: ['Break! Have some water.', 'Stretch a little.', 'Eyes off the screen.'],
+      sleep: ['Back in a bit …', 'Just resting.'],
+      poke: ['Hello!', 'All good?', 'Beep!', 'I’m here if you need me.', 'You can do this.', 'Tip: print() is your friend.', 'Error messages aren’t enemies.'],
+    },
+  };
+  const bags = {};
+  const pick = (kind) => {
+    const all = SAY[document.documentElement.lang === 'en' ? 'en' : 'de'][kind];
+    const key = document.documentElement.lang + kind;
+    if (!bags[key] || !bags[key].length) {
+      bags[key] = all.slice().sort(() => Math.random() - 0.5);
+      if (bags[key][bags[key].length - 1] === lastSaid) bags[key].reverse();
+    }
+    return bags[key].pop();
+  };
+
+  /* ---------------------------------------------------- Sprechblase */
+  let talk = true;
+  try { talk = localStorage.getItem(KEY + '.talk') !== 'off'; } catch (e) { /* ohne Speicher: an */ }
+  const bubble = document.createElement('div');
+  bubble.className = 'mascot-bubble';
+  bubble.setAttribute('role', 'status');
+  bubble.setAttribute('aria-live', 'polite');
+  bubble.hidden = true;
+  btn.parentNode.append(bubble);
+  let bubbleTimer = 0;
+  let lastSaid = '';
+  let lastAt = 0;
+  const COOLDOWN = 60000;       // zwischen zwei freiwilligen Sprüchen mindestens eine Minute
+
+  const hush = () => { clearTimeout(bubbleTimer); bubble.classList.remove('is-in'); bubbleTimer = setTimeout(() => { bubble.hidden = true; }, 250); };
+  /* force: vom Nutzer ausgelöst (Klick), ignoriert die Pause zwischen Sprüchen */
+  const say = (kind, force = false) => {
+    if (!enabled || !talk) return;
+    if (!force && Date.now() - lastAt < COOLDOWN) return;
+    const text = pick(kind);
+    lastSaid = text;
+    lastAt = Date.now();
+    clearTimeout(bubbleTimer);
+    bubble.textContent = text;
+    bubble.hidden = false;
+    void bubble.offsetWidth;
+    bubble.classList.add('is-in');
+    bubbleTimer = setTimeout(hush, 4600);
+  };
+  bubble.addEventListener('click', hush);
+
   /* ---------------------------------------------------------- Zustand */
   let enabled = true;
   try { enabled = localStorage.getItem(KEY) !== 'off'; } catch (e) { /* ohne Speicher: an */ }
@@ -72,6 +137,9 @@ const PyLabMascot = (() => {
   let tempTimer = 0;
   let wasRunning = false;
   let prevRunning = false;
+  let prevBase = 'idle';
+  let wasSleeping = false;
+  let failStreak = 0;
 
   const paint = () => { btn.dataset.state = temp || base; };
   const flash = (state, ms = 2600) => {
@@ -94,7 +162,14 @@ const PyLabMascot = (() => {
     if (s.mode === 'break' && s.running) base = 'rest';
     else if (!s.running && wasRunning) base = 'sleep';
     else base = 'idle';
-    if (s.running && !prevRunning) { hop(); flash('happy', 1600); }
+    if (s.running && !prevRunning) {
+      hop(); flash('happy', 1600);
+      if (base === 'idle' && wasSleeping) say('back'); else if (Math.random() < 0.4) say('start');
+    }
+    if (base === 'rest' && prevBase !== 'rest') say('rest');
+    if (base === 'sleep' && prevBase !== 'sleep') say('sleep');
+    wasSleeping = base === 'sleep' ? true : (s.running ? false : wasSleeping);
+    prevBase = base;
     prevRunning = s.running;
     paint();
   }
@@ -102,10 +177,18 @@ const PyLabMascot = (() => {
   const label = () => { btn.title = btn.ariaLabel = t('mascot.name'); };
   label();
 
-  btn.addEventListener('click', () => { hop(); flash('happy', 1400); });
+  btn.addEventListener('click', () => { hop(); flash('happy', 1400); say('poke', true); });
   window.addEventListener('pylab:task', (e) => {
     if (!enabled) return;
-    if (e.detail && e.detail.ok) { hop(); flash('happy'); } else flash('worry', 3000);
+    if (e.detail && e.detail.ok) {
+      hop(); flash('happy');
+      if (failStreak >= 2 || Math.random() < 0.3) say('win');   // nach Durchhängern immer, sonst selten
+      failStreak = 0;
+    } else {
+      flash('worry', 3000);
+      failStreak++;
+      if (failStreak === 2 || failStreak % 4 === 0) say('fail');  // erst beim zweiten Fehlversuch, nie bei jedem
+    }
   });
   setInterval(syncTimer, 1000);
 
@@ -126,9 +209,17 @@ const PyLabMascot = (() => {
     get enabled() { return enabled; },
     set(on) {
       enabled = !!on;
+      if (!on) hush();
       try { localStorage.setItem(KEY, on ? 'on' : 'off'); } catch (e) { /* nur diese Sitzung */ }
       apply();
     },
+    get talk() { return talk; },
+    setTalk(on) {
+      talk = !!on;
+      try { localStorage.setItem(KEY + '.talk', on ? 'on' : 'off'); } catch (e) { /* nur diese Sitzung */ }
+      if (!on) hush();
+    },
+    say,
     relabel: label,
     show: (state) => flash(state, 4000),
   };
